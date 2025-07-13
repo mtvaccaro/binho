@@ -15,6 +15,9 @@ const io = new Server(server, {
 const roomPlayers = {}; // { roomId: [socketId1, socketId2] }
 const roomTurns = {};   // { roomId: currentTurn }
 
+// Add player names tracking
+const roomNames = {}; // { roomId: { 1: name1, 2: name2 } }
+
 // Add score tracking
 const roomScores = {}; // { roomId: { 1: 0, 2: 0 } }
 
@@ -59,10 +62,11 @@ function circlesCollide(a, rA, b, rB) {
 io.on('connection', (socket) => {
     console.log('a user connected:', socket.id);
   
-    socket.on('join-room', (roomId) => {
+    socket.on('join-room', ({ roomId, name }) => {
       socket.join(roomId);
-      console.log(`Socket ${socket.id} joined room ${roomId}`);
+      console.log(`Socket ${socket.id} joined room ${roomId} with name: ${name}`);
       if (!roomPlayers[roomId]) roomPlayers[roomId] = [null, null];
+      if (!roomNames[roomId]) roomNames[roomId] = { 1: '', 2: '' };
       console.log(`[BEFORE] roomPlayers[${roomId}]:`, roomPlayers[roomId]);
       // Remove socket ID from both slots if present
       if (roomPlayers[roomId][0] === socket.id) roomPlayers[roomId][0] = null;
@@ -75,14 +79,16 @@ io.on('connection', (socket) => {
       let assignedSlot = -1;
       if (roomPlayers[roomId][0] == null) {
         roomPlayers[roomId][0] = socket.id;
+        roomNames[roomId][1] = name;
         assignedSlot = 0;
       } else if (roomPlayers[roomId][1] == null) {
         roomPlayers[roomId][1] = socket.id;
+        roomNames[roomId][2] = name;
         assignedSlot = 1;
       } else {
         // Room full
         console.log('Room full, cannot join:', roomId);
-        io.to(socket.id).emit('joined-room', { socketId: socket.id, playerNumber: null, currentTurn: null });
+        io.to(socket.id).emit('joined-room', { socketId: socket.id, playerNumber: null, currentTurn: null, playerNames: {} });
         return;
       }
       roomPlayers[roomId].length = 2;
@@ -96,8 +102,8 @@ io.on('connection', (socket) => {
         console.error('Error: playerNumber is not 1 or 2:', playerNumber, roomPlayers[roomId]);
         return;
       }
-      io.to(socket.id).emit('joined-room', { socketId: socket.id, playerNumber, currentTurn: roomTurns[roomId] });
-      io.to(roomId).emit('turn-update', { currentTurn: roomTurns[roomId] });
+      io.to(socket.id).emit('joined-room', { socketId: socket.id, playerNumber, currentTurn: roomTurns[roomId], playerNames: roomNames[roomId] });
+      io.to(roomId).emit('turn-update', { currentTurn: roomTurns[roomId], playerNames: roomNames[roomId] });
 
       // Initialize ball state if not present
       if (!roomBall[roomId]) {
@@ -164,7 +170,7 @@ io.on('connection', (socket) => {
               // Game over
               clearInterval(ball.interval);
               ball.interval = null;
-              io.to(roomId).emit('game-over', { winner: scoringPlayer, score: roomScores[roomId] });
+              io.to(roomId).emit('game-over', { winner: scoringPlayer, score: roomScores[roomId], playerNames: roomNames[roomId] });
               return;
             }
             // Reset ball to center
@@ -176,10 +182,10 @@ io.on('connection', (socket) => {
             // Next turn is the player who conceded the goal
             let nextTurn = scoringPlayer === 1 ? 2 : 1;
             roomTurns[roomId] = nextTurn;
-            io.to(roomId).emit('goal', { scoringPlayer, score: roomScores[roomId], ballPos: ball.pos });
+            io.to(roomId).emit('goal', { scoringPlayer, score: roomScores[roomId], ballPos: ball.pos, playerNames: roomNames[roomId] });
             io.to(roomId).emit('ball-move', { ballPos: ball.pos });
-            io.to(roomId).emit('turn-update', { currentTurn: nextTurn });
-            io.to(roomId).emit('score-update', { score: roomScores[roomId] });
+            io.to(roomId).emit('turn-update', { currentTurn: nextTurn, playerNames: roomNames[roomId] });
+            io.to(roomId).emit('score-update', { score: roomScores[roomId], playerNames: roomNames[roomId] });
             return;
           }
           // 2. Peg collision and ricochet
@@ -231,7 +237,7 @@ io.on('connection', (socket) => {
             if (roomTurns[roomId] === 1) nextTurn = 2;
             else if (roomTurns[roomId] === 2) nextTurn = 1;
             roomTurns[roomId] = nextTurn;
-            io.to(roomId).emit('turn-update', { currentTurn: nextTurn });
+            io.to(roomId).emit('turn-update', { currentTurn: nextTurn, playerNames: roomNames[roomId] });
           }
         }, PHYSICS_TICK);
       }
@@ -250,6 +256,7 @@ io.on('connection', (socket) => {
         if (!roomPlayers[roomId][0] && !roomPlayers[roomId][1]) {
           delete roomPlayers[roomId];
           delete roomTurns[roomId];
+          delete roomNames[roomId];
         }
       }
       console.log(`Socket ${socket.id} left room ${roomId}`);
@@ -276,9 +283,9 @@ io.on('connection', (socket) => {
         interval: null,
       };
       roomTurns[roomId] = 1;
-      io.to(roomId).emit('score-update', { score: roomScores[roomId] });
+      io.to(roomId).emit('score-update', { score: roomScores[roomId], playerNames: roomNames[roomId] });
       io.to(roomId).emit('ball-move', { ballPos: roomBall[roomId].pos });
-      io.to(roomId).emit('turn-update', { currentTurn: 1 });
+      io.to(roomId).emit('turn-update', { currentTurn: 1, playerNames: roomNames[roomId] });
       io.to(roomId).emit('game-restarted');
     });
   
@@ -294,6 +301,7 @@ io.on('connection', (socket) => {
         if (!roomPlayers[roomId][0] && !roomPlayers[roomId][1]) {
           delete roomPlayers[roomId];
           delete roomTurns[roomId];
+          delete roomNames[roomId];
         }
       }
       console.log('user disconnected:', socket.id);

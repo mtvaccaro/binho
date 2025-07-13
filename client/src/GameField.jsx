@@ -1,7 +1,8 @@
 import React, { useRef, useEffect } from 'react';
 import fieldTexture from './assets/field.png';
 
-const SOCCER_BALL_IMG = 'https://assets.bwbx.io/images/users/iqjWHBFdfxIU/i7j7kIBS2BF8/v0/-1x-1.webp';
+const SOCCER_BALL_IMG = 'https://images.rawpixel.com/image_png_social_square/cHJpdmF0ZS9sci9pbWFnZXMvd2Vic2l0ZS8yMDIzLTA3L2pvYjY4MS0wMDYwLXAucG5n.png';
+//'https://assets.bwbx.io/images/users/iqjWHBFdfxIU/i7j7kIBS2BF8/v0/-1x-1.webp';
 
 function GameField({
   FIELD_WIDTH,
@@ -37,13 +38,28 @@ function GameField({
       // Move to center
       ctx.translate(BALL_RADIUS, BALL_RADIUS);
       ctx.rotate((ballAngle * Math.PI) / 180);
+      
+      // Add subtle drop shadow
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.25)';
+      ctx.shadowBlur = 6;
+      ctx.shadowOffsetX = 1;
+      ctx.shadowOffsetY = 2;
+      
       // Clip to circle
       ctx.beginPath();
       ctx.arc(0, 0, BALL_RADIUS, 0, 2 * Math.PI);
       ctx.closePath();
       ctx.clip();
+      
       // Draw image centered
       ctx.drawImage(img, -BALL_RADIUS, -BALL_RADIUS, BALL_RADIUS * 2, BALL_RADIUS * 2);
+      
+      // Reset shadow
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 0;
+      
       ctx.restore();
     };
   }, [ballPos.x, ballPos.y, ballAngle, BALL_RADIUS]);
@@ -76,11 +92,19 @@ function GameField({
         viewBox={`0 0 ${FIELD_WIDTH} ${FIELD_HEIGHT}`}
         width="100%"
         height="100%"
-        style={{ background: 'transparent', borderRadius: 20, display: 'block', touchAction: 'none', transform: playerNumber === 2 ? 'rotate(180deg)' : 'none', position: 'relative', zIndex: 1 }}
+        style={{ 
+          background: 'transparent', 
+          borderRadius: 20, 
+          display: 'block', 
+          touchAction: 'none', 
+          transform: playerNumber === 2 ? 'rotate(180deg)' : 'none', 
+          position: 'relative', 
+          zIndex: 1
+        }}
         onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
+        // Remove mouse move and up handlers - now handled globally
+        // onMouseMove={handleMouseMove}
+        // onMouseUp={handleMouseUp}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
         xmlns="http://www.w3.org/2000/svg"
