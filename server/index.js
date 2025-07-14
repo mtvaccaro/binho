@@ -32,7 +32,7 @@ const BALL_RADIUS = 18;
 // Add peg positions and radius
 const PEG_RADIUS = 7;
 const PEG_DAMPING = 0.5; // Stronger energy loss for pegs
-const WINNING_SCORE = 7;
+const WINNING_SCORE = 3; // Keep in sync with client WIN_SCORE
 const topPegs = [
   { x: 100, y: 70 }, { x: 210, y: 70 }, { x: 320, y: 70 },
   { x: 160, y: 50 }, { x: 260, y: 50 },

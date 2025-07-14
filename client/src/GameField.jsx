@@ -20,9 +20,11 @@ function GameField({
   handleMouseMove,
   handleMouseUp,
   handleTouchStart,
+  handleTouchMove,
   handleTouchEnd,
   svgRef,
   ballAngle = 0, // new prop for rotation
+  clutchActive = false,
 }) {
   // Canvas ref for the ball
   const ballCanvasRef = useRef();
@@ -63,21 +65,71 @@ function GameField({
       ctx.restore();
     };
   }, [ballPos.x, ballPos.y, ballAngle, BALL_RADIUS]);
+
+  // State for animated clutch wiggle
+  const [clutchWiggle, setClutchWiggle] = React.useState(0);
+  React.useEffect(() => {
+    let animId;
+    if (clutchActive && dragging) {
+      const start = performance.now();
+      const animate = (now) => {
+        // 10px amplitude, 2Hz frequency
+        const t = (now - start) / 1000;
+        setClutchWiggle(Math.sin(t * 2 * Math.PI * 2) * 10);
+        animId = requestAnimationFrame(animate);
+      };
+      animId = requestAnimationFrame(animate);
+    } else {
+      setClutchWiggle(0);
+    }
+    return () => {
+      if (animId) cancelAnimationFrame(animId);
+    };
+  }, [clutchActive, dragging]);
+
+  // Calculate scale factor for responsive layout
+  const containerRef = useRef();
+  const [scale, setScale] = React.useState(1);
+  useEffect(() => {
+    function updateScale() {
+      if (!containerRef.current) return;
+      const parent = containerRef.current.parentElement;
+      if (!parent) return;
+      const parentWidth = parent.offsetWidth;
+      const parentHeight = parent.offsetHeight;
+      const scaleW = parentWidth / FIELD_WIDTH;
+      const scaleH = parentHeight / FIELD_HEIGHT;
+      setScale(Math.min(scaleW, scaleH, 1));
+    }
+    updateScale();
+    window.addEventListener('resize', updateScale);
+    return () => window.removeEventListener('resize', updateScale);
+  }, [FIELD_WIDTH, FIELD_HEIGHT]);
+
   return (
-    <div style={{
-      position: 'relative',
-      width: '100%',
-      height: '100%',
-      overflow: 'hidden',
-    }}>
+    <div
+      ref={containerRef}
+      style={{
+        position: 'relative',
+        width: FIELD_WIDTH,
+        height: FIELD_HEIGHT,
+        margin: '0 auto',
+        background: 'transparent',
+        overflow: 'hidden',
+        transform: `scale(${scale})`,
+        transformOrigin: 'top left',
+        maxWidth: '100vw',
+        maxHeight: '100vh',
+      }}
+    >
       {/* Grass background behind SVG */}
       <div
         style={{
           position: 'absolute',
           top: 0,
           left: 0,
-          width: '100%',
-          height: '100%',
+          width: FIELD_WIDTH,
+          height: FIELD_HEIGHT,
           zIndex: 0,
           backgroundImage: `url(${fieldTexture})`,
           backgroundSize: 'cover',
@@ -90,22 +142,22 @@ function GameField({
       <svg
         ref={svgRef}
         viewBox={`0 0 ${FIELD_WIDTH} ${FIELD_HEIGHT}`}
-        width="100%"
-        height="100%"
-        style={{ 
-          background: 'transparent', 
-          borderRadius: 20, 
-          display: 'block', 
-          touchAction: 'none', 
-          transform: playerNumber === 2 ? 'rotate(180deg)' : 'none', 
-          position: 'relative', 
-          zIndex: 1
+        width={FIELD_WIDTH}
+        height={FIELD_HEIGHT}
+        style={{
+          background: 'transparent',
+          borderRadius: 20,
+          display: 'block',
+          touchAction: 'none',
+          transform: playerNumber === 2 ? 'rotate(180deg)' : 'none',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          zIndex: 1,
         }}
         onMouseDown={handleMouseDown}
-        // Remove mouse move and up handlers - now handled globally
-        // onMouseMove={handleMouseMove}
-        // onMouseUp={handleMouseUp}
         onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         xmlns="http://www.w3.org/2000/svg"
       >
@@ -138,17 +190,32 @@ function GameField({
           <circle key={i} cx={peg.x} cy={peg.y} r={PEG_RADIUS} fill="#eee" stroke="#888" strokeWidth="2" />
         ))}
         {/* Drag line (show for both mouse and touch) */}
-        {dragging && dragStart && dragEnd && (
-          <line
-            x1={ballPos.x}
-            y1={ballPos.y}
-            x2={ballPos.x + (dragStart.x - dragEnd.x)}
-            y2={ballPos.y + (dragStart.y - dragEnd.y)}
-            stroke="#ff0"
-            strokeWidth="4"
-            markerEnd="url(#arrowhead)"
-          />
-        )}
+        {dragging && dragStart && dragEnd && (() => {
+          // Calculate wiggle offset for clutch
+          let wiggleX = 0, wiggleY = 0;
+          if (clutchActive) {
+            // Arrow direction
+            const dx = dragStart.x - dragEnd.x;
+            const dy = dragStart.y - dragEnd.y;
+            const len = Math.sqrt(dx * dx + dy * dy) || 1;
+            // Perpendicular vector
+            const perpX = -dy / len;
+            const perpY = dx / len;
+            wiggleX = perpX * clutchWiggle;
+            wiggleY = perpY * clutchWiggle;
+          }
+          return (
+            <line
+              x1={ballPos.x}
+              y1={ballPos.y}
+              x2={ballPos.x + (dragStart.x - dragEnd.x) + wiggleX}
+              y2={ballPos.y + (dragStart.y - dragEnd.y) + wiggleY}
+              stroke={clutchActive ? 'orange' : '#ff0'}
+              strokeWidth="4"
+              markerEnd="url(#arrowhead)"
+            />
+          );
+        })()}
       </svg>
       {/* Ball canvas overlay, mirrored for Player 2 */}
       {(() => {
@@ -169,6 +236,8 @@ function GameField({
               position: 'absolute',
               left: canvasX,
               top: canvasY,
+              width: BALL_RADIUS * 2,
+              height: BALL_RADIUS * 2,
               pointerEvents: 'none',
               zIndex: 10,
               transform,

@@ -53,6 +53,12 @@ function Game() {
   const [playerName, setPlayerName] = useState('');
   const [nameSubmitted, setNameSubmitted] = useState(false);
 
+  // WIN_SCORE for clutch mechanic and victory (set to 3 for first to 3 wins)
+  const WIN_SCORE = 3;
+
+  // Determine if clutch mode is active for the current shooter
+  const clutchActive = score[playerNumber] === WIN_SCORE - 1 && playerNumber === currentTurn;
+
   // Update ball angle on movement
   useEffect(() => {
     const dx = ballPos.x - lastBallPos.current.x;
@@ -81,44 +87,68 @@ function Game() {
     return { x: svgP.x, y: svgP.y };
   };
 
-  // Add global mouse tracking
+  // Add global touch tracking
   useEffect(() => {
-    const handleGlobalMouseMove = (e) => {
+    function handleGlobalTouchMove(e) {
+      if (dragging && isTouch && e.touches.length === 1) {
+        e.preventDefault(); // This is allowed!
+        const { x, y } = getSvgCoords(e.touches[0].clientX, e.touches[0].clientY);
+        setDragEnd({ x, y });
+      }
+    }
+
+    function handleGlobalTouchEnd(e) {
+      if (dragging && isTouch) {
+        e.preventDefault();
+        handlePointerUp(e);
+      }
+    }
+
+    if (dragging && isTouch) {
+      document.addEventListener('touchmove', handleGlobalTouchMove, { passive: false });
+      document.addEventListener('touchend', handleGlobalTouchEnd, { passive: false });
+    }
+
+    return () => {
+      document.removeEventListener('touchmove', handleGlobalTouchMove, { passive: false });
+      document.removeEventListener('touchend', handleGlobalTouchEnd, { passive: false });
+    };
+  }, [dragging, isTouch, dragStart, dragEnd, roomId]);
+
+  // Add global mouse tracking for desktop
+  useEffect(() => {
+    function handleGlobalMouseMove(e) {
       if (dragging && !isTouch) {
         const { x, y } = getSvgCoords(e.clientX, e.clientY);
         setDragEnd({ x, y });
       }
-    };
+    }
 
-    const handleGlobalMouseUp = (e) => {
+    function handleGlobalMouseUp(e) {
       if (dragging && !isTouch && dragStart && dragEnd) {
         const dx = dragStart.x - dragEnd.x;
         const dy = dragStart.y - dragEnd.y;
         const velocityScale = 0.5;
         let vx = dx * velocityScale;
         let vy = dy * velocityScale;
-        
-        // Apply max speed limit
-        const maxSpeed = 40; // Increased to 40
+        const maxSpeed = 40;
         const currentSpeed = Math.sqrt(vx * vx + vy * vy);
         if (currentSpeed > maxSpeed) {
           const scale = maxSpeed / currentSpeed;
           vx *= scale;
           vy *= scale;
         }
-        
         socket.emit('ball-move', { roomId, velocity: { x: vx, y: vy } });
         setDragging(false);
         setDragStart(null);
         setDragEnd(null);
       }
-    };
+    }
 
     if (dragging && !isTouch) {
       document.addEventListener('mousemove', handleGlobalMouseMove);
       document.addEventListener('mouseup', handleGlobalMouseUp);
     }
-
     return () => {
       document.removeEventListener('mousemove', handleGlobalMouseMove);
       document.removeEventListener('mouseup', handleGlobalMouseUp);
@@ -128,11 +158,14 @@ function Game() {
   // Update handlePointerDown to not set isTouch for mouse
   const handlePointerDown = (e) => {
     if (!canShoot()) return;
+    
     let clientX, clientY;
+    let isTouchEvent = false;
     if (e.touches && e.touches.length === 1) {
       setIsTouch(true);
       clientX = e.touches[0].clientX;
       clientY = e.touches[0].clientY;
+      isTouchEvent = true;
     } else if (e.clientX !== undefined) {
       setIsTouch(false);
       clientX = e.clientX;
@@ -141,8 +174,10 @@ function Game() {
       return;
     }
     const { x, y } = getSvgCoords(clientX, clientY);
+    // Use a larger touch target for mobile/touch events
+    const affordanceRadius = isTouchEvent ? BALL_RADIUS + 24 : BALL_RADIUS + 10;
     const dist = Math.hypot(x - ballPos.x, y - ballPos.y);
-    if (dist <= BALL_RADIUS + 10) {
+    if (dist <= affordanceRadius) {
       setDragging(true);
       setDragStart({ x, y });
       setDragEnd({ x, y });
@@ -237,6 +272,7 @@ function Game() {
     });
 
     // Game over dialog
+    // Show when a player reaches WIN_SCORE
     socket.on('game-over', ({ winner, score, playerNames: names }) => {
       setGameOver(true);
       setWinner(winner);
@@ -352,7 +388,33 @@ function Game() {
         </div>
       )}
       
-      <div style={{ height: '90vh', width: '90vw', maxHeight: 700, maxWidth: 420, background: '#222', borderRadius: 20, boxShadow: '0 4px 24px #0006', display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 10 }}>
+      <div style={{ height: '90vh', width: '90vw', maxHeight: 700, maxWidth: 420, background: '#222', borderRadius: 20, boxShadow: '0 4px 24px #0006', display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 10, position: 'relative' }}>
+        {/* Waiting for player overlay */}
+        {(!playerNames[1] || !playerNames[2]) && (
+          <div style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            background: 'rgba(0,0,0,0.6)',
+            zIndex: 100,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexDirection: 'column',
+            color: '#fff',
+            fontSize: '2em',
+            fontWeight: 'bold',
+            borderRadius: 20,
+            pointerEvents: 'none',
+            textAlign: 'center', // Center the text horizontally
+          }}>
+            {playerNames[1] && !playerNames[2] && `Waiting for Player 2 to join...`}
+            {!playerNames[1] && playerNames[2] && `Waiting for Player 1 to join...`}
+            {!playerNames[1] && !playerNames[2] && `Waiting for another player to join...`}
+          </div>
+        )}
         <GameField
           FIELD_WIDTH={FIELD_WIDTH}
           FIELD_HEIGHT={FIELD_HEIGHT}
@@ -373,6 +435,7 @@ function Game() {
           handleTouchEnd={handlePointerUp}
           svgRef={svgRef}
           ballAngle={ballAngle}
+          clutchActive={clutchActive}
         />
       </div>
       
