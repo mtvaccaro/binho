@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import fieldTexture from './assets/field.png';
+import fieldTexture from './assets/Field.png';
 
 const SOCCER_BALL_IMG = 'https://images.rawpixel.com/image_png_social_square/cHJpdmF0ZS9sci9pbWFnZXMvd2Vic2l0ZS8yMDIzLTA3L2pvYjY4MS0wMDYwLXAucG5n.png';
 //'https://assets.bwbx.io/images/users/iqjWHBFdfxIU/i7j7kIBS2BF8/v0/-1x-1.webp';
