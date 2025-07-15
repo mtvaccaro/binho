@@ -1,7 +1,7 @@
 // src/socket.js
 import { io } from "socket.io-client";
 
-// Connect to your backend server (adjust URL/port if needed)
-const socket = io("http://localhost:3001");
+// Connect to your backend server (production)
+const socket = io("https://binho-production.up.railway.app");
 
 export default socket;
