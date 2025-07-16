@@ -371,7 +371,20 @@ function Game() {
   }
 
   return (
-    <div style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+    <div
+      style={{
+        width: '100vw',
+        height: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'flex-start',
+        background: '#fff', // set to white
+        overflow: 'hidden',
+        padding: 0,
+        margin: 0,
+      }}
+    >
       <h1>Binho Mobile</h1>
       <div style={{ fontSize: '2em', fontWeight: 'bold', margin: '0.5em 0' }}>
         {playerNames[1] || 'Player 1'} {score[1]} - {score[2]} {playerNames[2] || 'Player 2'}
@@ -380,7 +393,6 @@ function Game() {
       <div style={{ fontSize: '1.5em', color: '#333', marginBottom: 10 }}>
         {playerNumber === currentTurn ? 'Your turn' : `${playerNames[currentTurn] || `Player ${currentTurn}`}'s turn`}
       </div>
-      
       {/* Goal Toast Message */}
       {showGoalToast && (
         <div style={{
@@ -401,8 +413,16 @@ function Game() {
           {goalMessage}
         </div>
       )}
-      
-      <div style={{ height: '90vh', width: '90vw', maxHeight: 700, maxWidth: 420, background: '#222', borderRadius: 20, boxShadow: '0 4px 24px #0006', display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 10, position: 'relative' }}>
+      <div
+        style={{
+          flex: 1,
+          width: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          position: 'relative',
+        }}
+      >
         {/* Waiting for player overlay */}
         {(!playerNames[1] || !playerNames[2]) && (
           <div style={{
@@ -422,7 +442,7 @@ function Game() {
             fontWeight: 'bold',
             borderRadius: 20,
             pointerEvents: 'none',
-            textAlign: 'center', // Center the text horizontally
+            textAlign: 'center',
           }}>
             {playerNames[1] && !playerNames[2] && `Waiting for Player 2 to join...`}
             {!playerNames[1] && playerNames[2] && `Waiting for Player 1 to join...`}
@@ -437,10 +457,15 @@ function Game() {
           pegs={pegs}
           ballPos={ballPos}
           dragging={dragging}
+          setDragging={setDragging}
           dragStart={dragStart}
+          setDragStart={setDragStart}
           dragEnd={dragEnd}
+          setDragEnd={setDragEnd}
           isTouch={isTouch}
+          setIsTouch={setIsTouch}
           playerNumber={playerNumber}
+          canShoot={canShoot}
           handleMouseDown={handlePointerDown}
           handleMouseMove={handlePointerMove}
           handleMouseUp={handlePointerUp}
@@ -452,7 +477,6 @@ function Game() {
           clutchActive={clutchActive}
         />
       </div>
-      
       {gameOver && (
         <div style={{
           position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.7)', zIndex: 1000,
