@@ -1,11 +1,14 @@
 // src/socket.js
 import { io } from "socket.io-client";
 
-// Use local backend in development, Railway in production
+// Use environment variable for backend URL if available
+const envBackendUrl = import.meta.env.VITE_BACKEND_URL;
 const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
-const backendUrl = isLocal
-  ? "http://localhost:3001"
-  : "https://binho-production.up.railway.app";
+const backendUrl = envBackendUrl
+  ? envBackendUrl
+  : isLocal
+    ? "http://localhost:3001"
+    : "https://binho-production.up.railway.app";
 const socket = io(backendUrl);
 
 // Add connection error and reconnect event listeners for debugging
