@@ -381,6 +381,7 @@ function Game() {
 
   return (
     <div
+      className="game-root"
       style={{
         width: '100vw',
         height: '100vh',
@@ -388,50 +389,72 @@ function Game() {
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'flex-start',
-        background: '#fff', // set to white
+        background: '#fff',
         overflow: 'hidden',
         padding: 0,
         margin: 0,
+        boxSizing: 'border-box',
+        // Safe area for iOS
+        paddingBottom: 'env(safe-area-inset-bottom)',
+        paddingTop: 'env(safe-area-inset-top)',
       }}
     >
-      <h1>Biñho</h1>
-      <div style={{ fontSize: '2em', fontWeight: 'bold', margin: '0.5em 0' }}>
-        {playerNames[1] || 'Player 1'} {score[1]} - {score[2]} {playerNames[2] || 'Player 2'}
-      </div>
-      <div style={{ fontSize: '1.2em', marginBottom: 10 }}>Room ID: {roomId}</div>
-      <div style={{ fontSize: '1.5em', color: '#333', marginBottom: 10 }}>
-        {playerNumber === currentTurn ? 'Your turn' : `${playerNames[currentTurn] || `Player ${currentTurn}`}'s turn`}
-      </div>
-      {/* Goal Toast Message */}
-      {showGoalToast && (
-        <div style={{
-          position: 'fixed',
-          top: '20%',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          background: 'linear-gradient(135deg, #4CAF50, #45a049)',
-          color: 'white',
-          padding: '15px 30px',
-          borderRadius: '25px',
-          fontSize: '1.5em',
-          fontWeight: 'bold',
-          boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
-          zIndex: 1001,
-          animation: 'slideInDown 0.3s ease-out'
-        }}>
-          {goalMessage}
+      {/* Mobile-specific responsive style */}
+      <style>{`
+        @media (max-width: 700px) {
+          .game-root {
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            justify-content: flex-start;
+            box-sizing: border-box;
+            padding-bottom: env(safe-area-inset-bottom);
+            padding-top: env(safe-area-inset-top);
+          }
+          .game-header {
+            width: 100vw;
+            min-height: 60px;
+            max-height: 18vh;
+            flex: 0 0 auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #fff;
+            z-index: 2;
+            font-size: 1.1em;
+            padding: 0.5em 0 0.2em 0;
+          }
+          .game-field-mobile {
+            flex: 1 1 0;
+            min-height: 0;
+            min-width: 0;
+            width: 100vw;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #fff;
+            position: relative;
+            z-index: 1;
+            box-sizing: border-box;
+          }
+        }
+      `}</style>
+      <div className="game-header">
+        <h1 style={{ margin: 0, fontSize: '2em', fontWeight: 700 }}>Biñho</h1>
+        <div style={{ fontSize: '1.2em', fontWeight: 'bold', margin: '0.2em 0' }}>
+          {playerNames[1] || 'Player 1'} {score[1]} - {score[2]} {playerNames[2] || 'Player 2'}
         </div>
-      )}
-      <div
-        style={{
-          flex: 1,
-          width: '100%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          position: 'relative',
-        }}
-      >
+        <div style={{ fontSize: '1em', marginBottom: 4 }}>Room ID: {roomId}</div>
+        <div style={{ fontSize: '1.1em', color: '#333', marginBottom: 2 }}>
+          {playerNumber === currentTurn ? 'Your turn' : `${playerNames[currentTurn] || `Player ${currentTurn}`}'s turn`}
+        </div>
+      </div>
+      {/* Field container for mobile */}
+      <div className="game-field-mobile">
         {/* Waiting for player overlay */}
         {(!playerNames[1] || !playerNames[2]) && (
           <div style={{
@@ -486,6 +509,26 @@ function Game() {
           clutchActive={clutchActive}
         />
       </div>
+      {/* Goal Toast Message */}
+      {showGoalToast && (
+        <div style={{
+          position: 'fixed',
+          top: '20%',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: 'linear-gradient(135deg, #4CAF50, #45a049)',
+          color: 'white',
+          padding: '15px 30px',
+          borderRadius: '25px',
+          fontSize: '1.5em',
+          fontWeight: 'bold',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+          zIndex: 1001,
+          animation: 'slideInDown 0.3s ease-out'
+        }}>
+          {goalMessage}
+        </div>
+      )}
       {gameOver && (
         <div style={{
           position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.7)', zIndex: 1000,

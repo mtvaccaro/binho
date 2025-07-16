@@ -115,13 +115,23 @@ function GameField({
     @media (max-width: 700px) {
       .binho-field-container {
         width: 100vw !important;
+        height: 100% !important;
         max-width: 100vw !important;
-        height: auto !important;
-        max-height: 100vh !important;
+        max-height: 100% !important;
         aspect-ratio: 3/5;
         margin: 0 auto !important;
         box-shadow: none;
         border-radius: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .binho-field-container > svg {
+        width: 100vw !important;
+        height: 100% !important;
+        max-width: 100vw !important;
+        max-height: 100% !important;
+        display: block;
       }
     }
   `;
