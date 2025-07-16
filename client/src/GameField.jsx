@@ -111,6 +111,7 @@ function GameField({
       box-shadow: 0 4px 24px #0006;
       max-width: 420px;
       max-height: 700px;
+      box-sizing: border-box;
     }
     @media (max-width: 700px) {
       .binho-field-container {
@@ -125,6 +126,8 @@ function GameField({
         display: flex;
         align-items: center;
         justify-content: center;
+        box-sizing: border-box;
+        margin-bottom: 100px !important;
       }
       .binho-field-container > svg {
         width: 100vw !important;
@@ -132,6 +135,7 @@ function GameField({
         max-width: 100vw !important;
         max-height: 100% !important;
         display: block;
+        box-sizing: border-box;
       }
     }
   `;
@@ -254,12 +258,19 @@ function GameField({
               wiggleX = perpX * clutchWiggle;
               wiggleY = perpY * clutchWiggle;
             }
+            // Fix: Invert drag vector for Player 2 so arrow matches shot direction
+            let dx = dragStart.x - dragEnd.x;
+            let dy = dragStart.y - dragEnd.y;
+            if (playerNumber === 2) {
+              dx = -dx;
+              dy = -dy;
+            }
             return (
               <line
                 x1={ballPos.x}
                 y1={ballPos.y}
-                x2={ballPos.x + (dragStart.x - dragEnd.x) + wiggleX}
-                y2={ballPos.y + (dragStart.y - dragEnd.y) + wiggleY}
+                x2={ballPos.x + dx + wiggleX}
+                y2={ballPos.y + dy + wiggleY}
                 stroke={clutchActive ? 'orange' : '#ff0'}
                 strokeWidth="4"
                 markerEnd="url(#arrowhead)"
