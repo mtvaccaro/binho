@@ -25,7 +25,12 @@ function App() {
   const handleCreateGame = async () => {
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:3001/api/create-room');
+      // Use Railway backend in production, localhost in development
+      const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      const apiBase = isLocal
+        ? 'http://localhost:3001'
+        : 'https://binho-production.up.railway.app';
+      const res = await fetch(`${apiBase}/api/create-room`);
       const data = await res.json();
       if (data.roomId) {
         navigate(`/play/${data.roomId}`);
