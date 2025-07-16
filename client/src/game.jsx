@@ -295,6 +295,20 @@ function Game() {
     };
   }, [roomId, nameSubmitted, playerName]);
 
+  // Add global socket error handler for debugging
+  useEffect(() => {
+    function handleSocketError(err) {
+      console.error('❌ Socket error event:', err);
+      if (window && window.alert) {
+        window.alert('Socket error: ' + (err && err.message ? err.message : err));
+      }
+    }
+    socket.on('error', handleSocketError);
+    return () => {
+      socket.off('error', handleSocketError);
+    };
+  }, []);
+
   const handleRestart = () => {
     socket.emit('restart-game', roomId);
   };
