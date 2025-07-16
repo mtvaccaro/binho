@@ -12,18 +12,29 @@ app.get('/', (req, res) => {
 const allowedOrigins = [
   'https://binho.vercel.app',
   'http://localhost:5173',
-  'http://localhost:3000'
+  'http://localhost:3000',
+  /^https:\/\/[a-zA-Z0-9-]+--binho(-[a-zA-Z0-9-]+)?--mtvaccaros-projects\.vercel\.app$/,
+  /^https:\/\/[a-zA-Z0-9-]+-binho(-[a-zA-Z0-9-]+)?-mtvaccaros-projects\.vercel\.app$/,
+  /^https:\/\/[a-zA-Z0-9-]+\.vercel\.app$/
 ];
 
+function dynamicCorsOrigin(origin, callback) {
+  if (!origin) return callback(null, true);
+  if (allowedOrigins.some(o => (typeof o === 'string' ? o === origin : o.test(origin)))) {
+    return callback(null, true);
+  }
+  return callback(new Error('Not allowed by CORS: ' + origin), false);
+}
+
 app.use(cors({
-  origin: allowedOrigins,
+  origin: dynamicCorsOrigin,
   credentials: true
 }));
 
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: allowedOrigins,
+    origin: dynamicCorsOrigin,
     credentials: true
   }
 });
