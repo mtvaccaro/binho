@@ -138,6 +138,29 @@ function GameField({
         box-sizing: border-box;
       }
     }
+    @media (min-width: 701px) {
+      .binho-field-container {
+        width: 100%;
+        max-width: 420px;
+        max-height: 700px;
+        margin: 0 auto;
+        display: block;
+        box-shadow: 0 4px 24px #0006;
+        border-radius: 20px;
+        aspect-ratio: 3/5;
+        height: auto;
+        background: transparent;
+        box-sizing: border-box;
+      }
+      .binho-field-container > svg {
+        width: 100%;
+        max-width: 420px;
+        max-height: 700px;
+        height: auto;
+        display: block;
+        box-sizing: border-box;
+      }
+    }
   `;
 
   // Utility to convert client (screen) coordinates to SVG coordinates

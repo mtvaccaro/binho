@@ -389,21 +389,22 @@ function Game() {
     <div
       className="game-root"
       style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        width: '100vw',
-        height: '100dvh', // Use dynamic viewport height
-        minHeight: '100vh', // Fallback for browsers that don't support 100dvh
+        position: 'static',
+        minHeight: '100vh',
+        minWidth: '100vw',
+        width: '100%',
+        height: '100%',
         overflow: 'hidden',
         background: '#fff',
         boxSizing: 'border-box',
-        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-        paddingTop: 'env(safe-area-inset-top, 0px)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'flex-start',
         zIndex: 0,
       }}
     >
-      {/* Mobile-specific responsive style */}
+      {/* Responsive style: mobile gets fixed, full-viewport, flexbox anchoring; desktop is classic centered */}
       <style>{`
         @media (max-width: 700px) {
           .game-root {
@@ -419,6 +420,10 @@ function Game() {
             padding-bottom: env(safe-area-inset-bottom, 0px);
             padding-top: env(safe-area-inset-top, 0px);
             z-index: 0;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
           }
           .game-header {
             width: 100vw;
@@ -453,6 +458,61 @@ function Game() {
             box-sizing: border-box;
             width: calc(100vw - 32px);
             height: calc(100dvh - 32px - var(--header-height, 64px));
+            max-width: 420px;
+            max-height: 700px;
+            aspect-ratio: 3/5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+          }
+        }
+        @media (min-width: 701px) {
+          .game-root {
+            position: static !important;
+            width: 100%;
+            height: 100%;
+            min-height: 100vh;
+            min-width: 100vw;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            background: #fff;
+            box-sizing: border-box;
+            overflow: hidden;
+          }
+          .game-header {
+            width: 100%;
+            max-width: 480px;
+            margin: 0 auto;
+            min-height: 56px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #fff;
+            z-index: 2;
+            font-size: 1.3em;
+            padding: 1em 0 0.5em 0;
+          }
+          .game-canvas-container {
+            width: 100%;
+            max-width: 480px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #fff;
+            position: relative;
+            z-index: 1;
+            box-sizing: border-box;
+            padding: 0;
+          }
+          .anchored-field {
+            margin: 24px auto 0 auto;
+            box-sizing: border-box;
+            width: 100%;
             max-width: 420px;
             max-height: 700px;
             aspect-ratio: 3/5;
