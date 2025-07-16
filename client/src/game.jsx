@@ -394,7 +394,7 @@ function Game() {
         margin: 0,
       }}
     >
-      <h1>Binho Mobile</h1>
+      <h1>Biñho</h1>
       <div style={{ fontSize: '2em', fontWeight: 'bold', margin: '0.5em 0' }}>
         {playerNames[1] || 'Player 1'} {score[1]} - {score[2]} {playerNames[2] || 'Player 2'}
       </div>

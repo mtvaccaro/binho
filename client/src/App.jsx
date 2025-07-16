@@ -46,7 +46,7 @@ function App() {
 
   return (
     <div style={{ padding: '2rem', fontFamily: 'sans-serif' }}>
-      <h1>Binho Mobile</h1>
+      <h1>Biñho</h1>
       <p>Check your browser console to confirm the socket is connected.</p>
       <button onClick={handleCreateGame} disabled={loading} style={{ marginTop: '2rem', fontSize: '1.2em' }}>
         {loading ? 'Creating Game...' : 'Create Game'}
