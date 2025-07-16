@@ -486,15 +486,34 @@ function Game() {
             width: 100%;
             max-width: 480px;
             margin: 0 auto;
-            min-height: 56px;
+            min-height: 40px;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             background: #fff;
             z-index: 2;
-            font-size: 1.3em;
-            padding: 1em 0 0.5em 0;
+            font-size: 1.05em;
+            padding: 0.5em 0 0.2em 0;
+          }
+          .game-header h1 {
+            font-size: 1.5em;
+            margin: 0 0 0.2em 0;
+            font-weight: 700;
+          }
+          .game-header .score {
+            font-size: 1.1em;
+            font-weight: bold;
+            margin: 0.1em 0;
+          }
+          .game-header .room {
+            font-size: 1em;
+            margin-bottom: 2px;
+          }
+          .game-header .turn {
+            font-size: 1em;
+            color: #333;
+            margin-bottom: 2px;
           }
           .game-canvas-container {
             width: 100%;
@@ -523,13 +542,13 @@ function Game() {
           }
         }
       `}</style>
-      <div className="game-header" style={{ fontSize: 'clamp(1.1em, 2vw, 2em)' }}>
-        <h1 style={{ margin: 0, fontSize: '2em', fontWeight: 700 }}>Biñho</h1>
-        <div style={{ fontSize: '1.2em', fontWeight: 'bold', margin: '0.2em 0' }}>
+      <div className="game-header">
+        <h1>Biñho</h1>
+        <div className="score">
           {playerNames[1] || 'Player 1'} {score[1]} - {score[2]} {playerNames[2] || 'Player 2'}
         </div>
-        <div style={{ fontSize: '1em', marginBottom: 4 }}>Room ID: {roomId}</div>
-        <div style={{ fontSize: '1.1em', color: '#333', marginBottom: 2 }}>
+        <div className="room">Room ID: {roomId}</div>
+        <div className="turn">
           {playerNumber === currentTurn ? 'Your turn' : `${playerNames[currentTurn] || `Player ${currentTurn}`}'s turn`}
         </div>
       </div>
