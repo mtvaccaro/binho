@@ -204,9 +204,8 @@ function GameField({
             display: 'block',
             touchAction: 'none',
             transform: playerNumber === 2 ? 'rotate(180deg)' : 'none',
-            position: 'absolute',
-            top: 0,
-            left: 0,
+            position: 'static',
+            margin: 'auto',
             zIndex: 1,
           }}
           onMouseDown={handlePointerDown}
