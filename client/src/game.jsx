@@ -53,6 +53,15 @@ function Game() {
   const [playerName, setPlayerName] = useState('');
   const [nameSubmitted, setNameSubmitted] = useState(false);
 
+  // Dynamically set the browser tab title based on player names
+  useEffect(() => {
+    if (playerNames[1] && playerNames[2]) {
+      document.title = `Biñho - ${playerNames[1]} vs ${playerNames[2]}`;
+    } else {
+      document.title = 'Biñho - Waiting for another player to join';
+    }
+  }, [playerNames]);
+
   // WIN_SCORE for clutch mechanic and victory (set to 3 for first to 3 wins)
   const WIN_SCORE = 3;
 
