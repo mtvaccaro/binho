@@ -215,7 +215,7 @@ function Game() {
       const velocityScale = 0.5;
       let vx = dx * velocityScale;
       let vy = dy * velocityScale;
-      
+
       // Apply max speed limit
       const maxSpeed = 40; // Increased to 40
       const currentSpeed = Math.sqrt(vx * vx + vy * vy);
@@ -224,7 +224,13 @@ function Game() {
         vx *= scale;
         vy *= scale;
       }
-      
+
+      // Fix: Invert velocity for Player 2 so both drag backward to shoot forward
+      if (playerNumber === 2) {
+        vx = -vx;
+        vy = -vy;
+      }
+
       socket.emit('ball-move', { roomId, velocity: { x: vx, y: vy } });
     }
     setDragging(false);
@@ -454,7 +460,7 @@ function Game() {
         </div>
       </div>
       {/* Field container for mobile */}
-      <div className="game-field-mobile">
+      <div className="game-field-mobile" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)' }}>
         {/* Waiting for player overlay */}
         {(!playerNames[1] || !playerNames[2]) && (
           <div style={{
