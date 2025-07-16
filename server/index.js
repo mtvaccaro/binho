@@ -4,6 +4,11 @@ const { Server } = require('socket.io');
 const cors = require('cors');
 const app = express();
 
+// Health check route for Railway and browsers
+app.get('/', (req, res) => {
+  res.send('Binho backend is running!');
+});
+
 const allowedOrigins = [
   'https://binho.vercel.app',
   'http://localhost:5173',
