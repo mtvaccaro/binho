@@ -389,41 +389,41 @@ function Game() {
     <div
       className="game-root"
       style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
         width: '100vw',
-        height: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'flex-start',
-        background: '#fff',
+        height: '100dvh', // Use dynamic viewport height
+        minHeight: '100vh', // Fallback for browsers that don't support 100dvh
         overflow: 'hidden',
-        padding: 0,
-        margin: 0,
+        background: '#fff',
         boxSizing: 'border-box',
-        // Safe area for iOS
-        paddingBottom: 'env(safe-area-inset-bottom)',
-        paddingTop: 'env(safe-area-inset-top)',
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        paddingTop: 'env(safe-area-inset-top, 0px)',
+        zIndex: 0,
       }}
     >
       {/* Mobile-specific responsive style */}
       <style>{`
         @media (max-width: 700px) {
           .game-root {
-            height: 100vh;
-            width: 100vw;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            align-items: stretch;
-            justify-content: flex-start;
+            position: fixed !important;
+            top: 0;
+            left: 0;
+            width: 100vw !important;
+            height: 100dvh !important;
+            min-height: 100vh !important;
+            overflow: hidden !important;
+            background: #fff;
             box-sizing: border-box;
-            padding-bottom: env(safe-area-inset-bottom);
-            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+            padding-top: env(safe-area-inset-top, 0px);
+            z-index: 0;
           }
           .game-header {
             width: 100vw;
-            min-height: 60px;
-            max-height: 18vh;
+            min-height: 48px;
+            max-height: 16vh;
             flex: 0 0 auto;
             display: flex;
             flex-direction: column;
@@ -431,10 +431,10 @@ function Game() {
             justify-content: center;
             background: #fff;
             z-index: 2;
-            font-size: 1.1em;
+            font-size: clamp(0.9em, 2vw, 1.1em);
             padding: 0.5em 0 0.2em 0;
           }
-          .game-field-mobile {
+          .game-canvas-container {
             flex: 1 1 0;
             min-height: 0;
             min-width: 0;
@@ -446,10 +446,24 @@ function Game() {
             position: relative;
             z-index: 1;
             box-sizing: border-box;
+            padding: 0;
+          }
+          .anchored-field {
+            margin: 16px;
+            box-sizing: border-box;
+            width: calc(100vw - 32px);
+            height: calc(100dvh - 32px - var(--header-height, 64px));
+            max-width: 420px;
+            max-height: 700px;
+            aspect-ratio: 3/5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
           }
         }
       `}</style>
-      <div className="game-header">
+      <div className="game-header" style={{ fontSize: 'clamp(1.1em, 2vw, 2em)' }}>
         <h1 style={{ margin: 0, fontSize: '2em', fontWeight: 700 }}>Biñho</h1>
         <div style={{ fontSize: '1.2em', fontWeight: 'bold', margin: '0.2em 0' }}>
           {playerNames[1] || 'Player 1'} {score[1]} - {score[2]} {playerNames[2] || 'Player 2'}
@@ -459,61 +473,62 @@ function Game() {
           {playerNumber === currentTurn ? 'Your turn' : `${playerNames[currentTurn] || `Player ${currentTurn}`}'s turn`}
         </div>
       </div>
-      {/* Field container for mobile */}
-      <div className="game-field-mobile" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)' }}>
-        {/* Waiting for player overlay */}
-        {(!playerNames[1] || !playerNames[2]) && (
-          <div style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            background: 'rgba(0,0,0,0.6)',
-            zIndex: 100,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexDirection: 'column',
-            color: '#fff',
-            fontSize: '2em',
-            fontWeight: 'bold',
-            borderRadius: 20,
-            pointerEvents: 'none',
-            textAlign: 'center',
-          }}>
-            {playerNames[1] && !playerNames[2] && `Waiting for Player 2 to join...`}
-            {!playerNames[1] && playerNames[2] && `Waiting for Player 1 to join...`}
-            {!playerNames[1] && !playerNames[2] && `Waiting for another player to join...`}
-          </div>
-        )}
-        <GameField
-          FIELD_WIDTH={FIELD_WIDTH}
-          FIELD_HEIGHT={FIELD_HEIGHT}
-          PEG_RADIUS={PEG_RADIUS}
-          BALL_RADIUS={BALL_RADIUS}
-          pegs={pegs}
-          ballPos={ballPos}
-          dragging={dragging}
-          setDragging={setDragging}
-          dragStart={dragStart}
-          setDragStart={setDragStart}
-          dragEnd={dragEnd}
-          setDragEnd={setDragEnd}
-          isTouch={isTouch}
-          setIsTouch={setIsTouch}
-          playerNumber={playerNumber}
-          canShoot={canShoot}
-          handleMouseDown={handlePointerDown}
-          handleMouseMove={handlePointerMove}
-          handleMouseUp={handlePointerUp}
-          handleTouchStart={handlePointerDown}
-          handleTouchMove={handlePointerMove}
-          handleTouchEnd={handlePointerUp}
-          svgRef={svgRef}
-          ballAngle={ballAngle}
-          clutchActive={clutchActive}
-        />
+      <div className="game-canvas-container">
+        <div className="anchored-field">
+          {/* Waiting for player overlay */}
+          {(!playerNames[1] || !playerNames[2]) && (
+            <div style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              background: 'rgba(0,0,0,0.6)',
+              zIndex: 100,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexDirection: 'column',
+              color: '#fff',
+              fontSize: '2em',
+              fontWeight: 'bold',
+              borderRadius: 20,
+              pointerEvents: 'none',
+              textAlign: 'center',
+            }}>
+              {playerNames[1] && !playerNames[2] && `Waiting for Player 2 to join...`}
+              {!playerNames[1] && playerNames[2] && `Waiting for Player 1 to join...`}
+              {!playerNames[1] && !playerNames[2] && `Waiting for another player to join...`}
+            </div>
+          )}
+          <GameField
+            FIELD_WIDTH={FIELD_WIDTH}
+            FIELD_HEIGHT={FIELD_HEIGHT}
+            PEG_RADIUS={PEG_RADIUS}
+            BALL_RADIUS={BALL_RADIUS}
+            pegs={pegs}
+            ballPos={ballPos}
+            dragging={dragging}
+            setDragging={setDragging}
+            dragStart={dragStart}
+            setDragStart={setDragStart}
+            dragEnd={dragEnd}
+            setDragEnd={setDragEnd}
+            isTouch={isTouch}
+            setIsTouch={setIsTouch}
+            playerNumber={playerNumber}
+            canShoot={canShoot}
+            handleMouseDown={handlePointerDown}
+            handleMouseMove={handlePointerMove}
+            handleMouseUp={handlePointerUp}
+            handleTouchStart={handlePointerDown}
+            handleTouchMove={handlePointerMove}
+            handleTouchEnd={handlePointerUp}
+            svgRef={svgRef}
+            ballAngle={ballAngle}
+            clutchActive={clutchActive}
+          />
+        </div>
       </div>
       {/* Goal Toast Message */}
       {showGoalToast && (
