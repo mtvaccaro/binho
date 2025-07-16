@@ -19,10 +19,16 @@ const allowedOrigins = [
 ];
 
 function dynamicCorsOrigin(origin, callback) {
-  if (!origin) return callback(null, true);
-  if (allowedOrigins.some(o => (typeof o === 'string' ? o === origin : o.test(origin)))) {
+  console.log('CORS origin:', origin);
+  if (!origin) {
+    console.log('CORS: No origin, allowing');
     return callback(null, true);
   }
+  if (allowedOrigins.some(o => (typeof o === 'string' ? o === origin : o.test(origin)))) {
+    console.log('CORS: Allowed', origin);
+    return callback(null, true);
+  }
+  console.log('CORS: Denied', origin);
   return callback(new Error('Not allowed by CORS: ' + origin), false);
 }
 
