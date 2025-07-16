@@ -4,26 +4,21 @@ const { Server } = require('socket.io');
 const cors = require('cors');
 const app = express();
 
-// CORS configuration for production and development
+const allowedOrigins = [
+  'https://binho.vercel.app',
+  'http://localhost:5173',
+  'http://localhost:3000'
+];
+
 app.use(cors({
-  origin: [
-    'https://binho.vercel.app',
-    'https://*.vercel.app',
-    'http://localhost:5173',
-    'http://localhost:3000'
-  ],
+  origin: allowedOrigins,
   credentials: true
 }));
 
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: [
-      'https://binho.vercel.app',
-      'https://*.vercel.app',
-      'http://localhost:5173',
-      'http://localhost:3000'
-    ],
+    origin: allowedOrigins,
     credentials: true
   }
 });
