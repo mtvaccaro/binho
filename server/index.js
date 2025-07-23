@@ -6,7 +6,20 @@ const app = express();
 
 // Health check route for Railway and browsers
 app.get('/', (req, res) => {
-  res.send('Binho backend is running!');
+  res.status(200).json({ 
+    status: 'ok', 
+    message: 'Binho backend is running!',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Additional health check for Railway
+app.get('/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'healthy',
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString()
+  });
 });
 
 const allowedOrigins = [
@@ -345,8 +358,18 @@ io.on('connection', (socket) => {
   
 
 const PORT = process.env.PORT || 3000;
+
+// Add error handling for server startup
+server.on('error', (error) => {
+  console.error('Server error:', error);
+  if (error.code === 'EADDRINUSE') {
+    console.error(`Port ${PORT} is already in use`);
+  }
+});
+
 server.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
+  console.log(`Health check available at: http://localhost:${PORT}/health`);
 });
 
 // Utility to generate a 4-character alphanumeric code
