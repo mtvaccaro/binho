@@ -240,7 +240,7 @@ function GameField({
           {/* Arrowhead marker for drag line */}
           <defs>
             <marker id="arrowhead" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto" markerUnits="strokeWidth">
-              <polygon points="0,0 8,4 0,8" fill="#ff0" />
+              <polygon points="0,0 8,4 0,8" fill="#b5f200" />
             </marker>
           </defs>
           {/* Field outline */}
@@ -290,7 +290,7 @@ function GameField({
                 y1={ballPos.y}
                 x2={ballPos.x + dx + wiggleX}
                 y2={ballPos.y + dy + wiggleY}
-                stroke={clutchActive ? 'orange' : '#ff0'}
+                stroke={clutchActive ? 'orange' : '#b5f200'}
                 strokeWidth="4"
                 markerEnd="url(#arrowhead)"
               />
