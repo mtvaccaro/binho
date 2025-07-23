@@ -12,18 +12,35 @@ app.get('/', (req, res) => {
 const allowedOrigins = [
   'https://binho.vercel.app',
   'http://localhost:5173',
-  'http://localhost:3000'
+  'http://localhost:3000',
+  /^https:\/\/[a-zA-Z0-9-]+--binho(-[a-zA-Z0-9-]+)?--mtvaccaros-projects\.vercel\.app$/,
+  /^https:\/\/[a-zA-Z0-9-]+-binho(-[a-zA-Z0-9-]+)?-mtvaccaros-projects\.vercel\.app$/,
+  /^https:\/\/[a-zA-Z0-9-]+\.vercel\.app$/
 ];
 
+function dynamicCorsOrigin(origin, callback) {
+  console.log('CORS origin:', origin);
+  if (!origin) {
+    console.log('CORS: No origin, allowing');
+    return callback(null, true);
+  }
+  if (allowedOrigins.some(o => (typeof o === 'string' ? o === origin : o.test(origin)))) {
+    console.log('CORS: Allowed', origin);
+    return callback(null, true);
+  }
+  console.log('CORS: Denied', origin);
+  return callback(new Error('Not allowed by CORS: ' + origin), false);
+}
+
 app.use(cors({
-  origin: allowedOrigins,
+  origin: dynamicCorsOrigin,
   credentials: true
 }));
 
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: allowedOrigins,
+    origin: '*', // TEMP: allow all origins for debugging
     credentials: true
   }
 });
@@ -84,24 +101,27 @@ io.on('connection', (socket) => {
       console.log(`Socket ${socket.id} joined room ${roomId} with name: ${name}`);
       if (!roomPlayers[roomId]) roomPlayers[roomId] = [null, null];
       if (!roomNames[roomId]) roomNames[roomId] = { 1: '', 2: '' };
-      console.log(`[BEFORE] roomPlayers[${roomId}]:`, roomPlayers[roomId]);
+      console.log(`[BEFORE JOIN] roomPlayers[${roomId}]:`, roomPlayers[roomId]);
+      console.log(`[BEFORE JOIN] roomNames[${roomId}]:`, roomNames[roomId]);
       // Remove socket ID from both slots if present
       if (roomPlayers[roomId][0] === socket.id) roomPlayers[roomId][0] = null;
       if (roomPlayers[roomId][1] === socket.id) roomPlayers[roomId][1] = null;
       // Ensure both slots are present
       roomPlayers[roomId] = [roomPlayers[roomId][0] || null, roomPlayers[roomId][1] || null];
       roomPlayers[roomId].length = 2;
-      console.log(`[AFTER REMOVE] roomPlayers[${roomId}]:`, roomPlayers[roomId]);
+      console.log(`[AFTER CLEANUP] roomPlayers[${roomId}]:`, roomPlayers[roomId]);
       // Assign to first available slot
       let assignedSlot = -1;
       if (roomPlayers[roomId][0] == null) {
         roomPlayers[roomId][0] = socket.id;
         roomNames[roomId][1] = name;
         assignedSlot = 0;
+        console.log(`Assigned ${name} to slot 1 (Player 1)`);
       } else if (roomPlayers[roomId][1] == null) {
         roomPlayers[roomId][1] = socket.id;
         roomNames[roomId][2] = name;
         assignedSlot = 1;
+        console.log(`Assigned ${name} to slot 2 (Player 2)`);
       } else {
         // Room full
         console.log('Room full, cannot join:', roomId);
@@ -109,19 +129,26 @@ io.on('connection', (socket) => {
         return;
       }
       roomPlayers[roomId].length = 2;
-      console.log(`[AFTER ASSIGN] roomPlayers[${roomId}]:`, roomPlayers[roomId]);
       // Set turn to 1 if not set
       if (!roomTurns[roomId]) roomTurns[roomId] = 1;
       // Determine player number by index
       let playerNumber = roomPlayers[roomId].indexOf(socket.id) + 1;
-      console.log(`Socket: ${socket.id}, roomPlayers:`, roomPlayers[roomId], `indexOf:`, roomPlayers[roomId].indexOf(socket.id), `playerNumber:`, playerNumber);
       if (playerNumber !== 1 && playerNumber !== 2) {
         console.error('Error: playerNumber is not 1 or 2:', playerNumber, roomPlayers[roomId]);
         return;
       }
-      io.to(socket.id).emit('joined-room', { socketId: socket.id, playerNumber, currentTurn: roomTurns[roomId], playerNames: roomNames[roomId] });
+      console.log(`[AFTER ASSIGNMENT] roomPlayers[${roomId}]:`, roomPlayers[roomId]);
+      console.log(`[AFTER ASSIGNMENT] roomNames[${roomId}]:`, roomNames[roomId]);
+      console.log(`Emitting joined-room to socket ${socket.id} with playerNumber:`, playerNumber);
+      // Emit joined-room to ONLY the joining player
+      io.to(socket.id).emit('joined-room', {
+        socketId: socket.id,
+        playerNumber,
+        currentTurn: roomTurns[roomId],
+        playerNames: roomNames[roomId]
+      });
+      console.log(`Emitting turn-update to room ${roomId} with playerNames:`, roomNames[roomId]);
       io.to(roomId).emit('turn-update', { currentTurn: roomTurns[roomId], playerNames: roomNames[roomId] });
-
       // Initialize ball state if not present
       if (!roomBall[roomId]) {
         roomBall[roomId] = {
@@ -327,8 +354,8 @@ io.on('connection', (socket) => {
   
 
 const PORT = process.env.PORT || 3001;
-server.listen(PORT, () => {
-  console.log(`Server listening on port ${PORT}`);
+server.listen(3000, () => {
+  console.log('Server listening on port 3000');
 });
 
 // Utility to generate a 4-character alphanumeric code

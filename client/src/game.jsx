@@ -3,57 +3,66 @@ import { useParams } from 'react-router-dom';
 import socket from './socket';
 import GameField from './GameField';
 import { vecAdd, vecScale, vecMag } from './physics';
+import Banner from './Banner';
 
 function Game() {
   const { roomId } = useParams();
 
-  // Portrait field dimensions
+  // All hooks must be declared before any early return
+  // --- State and refs ---
+  const [bannerState, setBannerState] = useState('shot');
+  const [ballPos, setBallPos] = useState({ x: 420 / 2, y: 700 / 2 });
+  const [dragging, setDragging] = useState(false);
+  const [dragStart, setDragStart] = useState(null);
+  const [dragEnd, setDragEnd] = useState(null);
+  const [isTouch, setIsTouch] = useState(false);
+  const [playerNumber, setPlayerNumber] = useState(null);
+  const [currentTurn, setCurrentTurn] = useState(1);
+  const [score, setScore] = useState({ 1: 0, 2: 0 });
+  const [goalMessage, setGoalMessage] = useState('');
+  const [showGoalToast, setShowGoalToast] = useState(false);
+  const [gameOver, setGameOver] = useState(false);
+  const [winner, setWinner] = useState(null);
+  const [playerNames, setPlayerNames] = useState({ 1: '', 2: '' });
+  const [showNameDialog, setShowNameDialog] = useState(true);
+  const [playerName, setPlayerName] = useState('');
+  const [nameSubmitted, setNameSubmitted] = useState(false);
+  const lastBallPos = useRef(ballPos);
+  const ballAngleRef = useRef(0);
+  const [ballAngle, setBallAngle] = useState(0);
+  const touchStartRef = useRef(null);
+  const svgRef = useRef();
+  const isSyncingRef = useRef(false);
+  const playerNumberRef = useRef(null);
+
+  // --- Constants (move to top so all handlers can access) ---
   const FIELD_WIDTH = 420;
   const FIELD_HEIGHT = 700;
   const BALL_RADIUS = 12;
   const PEG_RADIUS = 7;
-
-  // User-provided top peg positions
   const topPegs = [
     { x: 100, y: 75 }, { x: 210, y: 90 }, { x: 320, y: 75 },
     { x: 160, y: 60 }, { x: 260, y: 60 },
     { x: 175, y: 140 }, { x: 245, y: 140 },
     { x: 115, y: 165 }, {x:310, y:165}, {x:210, y:235}
   ];
-  // Mirror pegs for the bottom side
   const bottomPegs = topPegs.map(peg => ({ x: peg.x, y: FIELD_HEIGHT - peg.y }));
   const pegs = [...topPegs, ...bottomPegs];
+  const clutchActive = false;
 
-  // Ball state
-  const [ballPos, setBallPos] = useState({ x: FIELD_WIDTH / 2, y: FIELD_HEIGHT / 2 });
-  const [dragging, setDragging] = useState(false);
-  const [dragStart, setDragStart] = useState(null);
-  const [dragEnd, setDragEnd] = useState(null);
-  const [isTouch, setIsTouch] = useState(false);
-  const [playerNumber, setPlayerNumber] = useState(null); // Assigned by server
-  const [currentTurn, setCurrentTurn] = useState(1); // Synced from server
-  const [score, setScore] = useState({ 1: 0, 2: 0 });
-  const [goalMessage, setGoalMessage] = useState('');
-  const [showGoalToast, setShowGoalToast] = useState(false);
-  const touchStartRef = useRef(null);
-  const svgRef = useRef();
-  const isSyncingRef = useRef(false); // Prevent double moves
-  const FRICTION = 0.985; // Friction coefficient per frame (tweak as needed)
-  const MIN_VELOCITY = 0.5; // Minimum velocity to stop
-  // Remove velocity, animRef, and related code
-  const [gameOver, setGameOver] = useState(false);
-  const [winner, setWinner] = useState(null);
-  const lastBallPos = useRef(ballPos);
-  const ballAngleRef = useRef(0);
-  const [ballAngle, setBallAngle] = useState(0);
+  // --- Effects ---
+  useEffect(() => {
+    if (!playerNames[1] || !playerNames[2]) {
+      setBannerState('waiting');
+    } else if (showGoalToast) {
+      setBannerState('goal');
+    } else if (gameOver) {
+      setBannerState('win');
+    } else {
+      setBannerState('shot');
+    }
+  }, [playerNames, showGoalToast, gameOver]);
 
-  // Player names state
-  const [playerNames, setPlayerNames] = useState({ 1: '', 2: '' });
-  const [showNameDialog, setShowNameDialog] = useState(true);
-  const [playerName, setPlayerName] = useState('');
-  const [nameSubmitted, setNameSubmitted] = useState(false);
-
-  // Dynamically set the browser tab title based on player names
   useEffect(() => {
     if (playerNames[1] && playerNames[2]) {
       document.title = `Biñho - ${playerNames[1]} vs ${playerNames[2]}`;
@@ -62,69 +71,62 @@ function Game() {
     }
   }, [playerNames]);
 
-  // WIN_SCORE for clutch mechanic and victory (set to 3 for first to 3 wins)
-  const WIN_SCORE = 3;
-
-  // Determine if clutch mode is active for the current shooter
-  const clutchActive = score[playerNumber] === WIN_SCORE - 1 && playerNumber === currentTurn;
-
-  // Update ball angle on movement
   useEffect(() => {
     const dx = ballPos.x - lastBallPos.current.x;
     const dy = ballPos.y - lastBallPos.current.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
-    // Ball circumference = 2 * pi * r; angle increment = (distance / circumference) * 360
-    const circumference = 2 * Math.PI * BALL_RADIUS;
+    const circumference = 2 * Math.PI * 12;
     const angleDelta = (dist / circumference) * 360;
-    // Use direction of movement to determine sign (optional, for realism)
     const sign = dx >= 0 ? 1 : -1;
     ballAngleRef.current += angleDelta * sign;
     setBallAngle(ballAngleRef.current);
     lastBallPos.current = ballPos;
   }, [ballPos.x, ballPos.y]);
 
-  // Only allow shooting if it's this player's turn
-  const canShoot = () => playerNumber === currentTurn;
-
-  // Convert screen coords to SVG coords
-  const getSvgCoords = (clientX, clientY) => {
-    const svg = svgRef.current;
-    const pt = svg.createSVGPoint();
-    pt.x = clientX;
-    pt.y = clientY;
-    const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
-    return { x: svgP.x, y: svgP.y };
-  };
-
-  // Add global touch tracking
   useEffect(() => {
     function handleGlobalTouchMove(e) {
       if (dragging && isTouch && e.touches.length === 1) {
-        e.preventDefault(); // This is allowed!
+        e.preventDefault();
         const { x, y } = getSvgCoords(e.touches[0].clientX, e.touches[0].clientY);
         setDragEnd({ x, y });
       }
     }
-
     function handleGlobalTouchEnd(e) {
+      console.log(`📱 Global touch end: dragging=${dragging}, isTouch=${isTouch}`);
       if (dragging && isTouch) {
         e.preventDefault();
-        handlePointerUp(e);
+        // Use the same logic as mouse up
+        if (dragStart && dragEnd) {
+          const dx = dragStart.x - dragEnd.x;
+          const dy = dragStart.y - dragEnd.y;
+          const velocityScale = 0.5;
+          let vx = dx * velocityScale;
+          let vy = dy * velocityScale;
+          const maxSpeed = 40;
+          const currentSpeed = Math.sqrt(vx * vx + vy * vy);
+          if (currentSpeed > maxSpeed) {
+            const scale = maxSpeed / currentSpeed;
+            vx *= scale;
+            vy *= scale;
+          }
+          console.log(`🚀 Global touch end emitting ball-move: roomId=${roomId}, velocity=(${vx.toFixed(2)}, ${vy.toFixed(2)})`);
+          socket.emit('ball-move', { roomId, velocity: { x: vx, y: vy } });
+          setDragging(false);
+          setDragStart(null);
+          setDragEnd(null);
+        }
       }
     }
-
     if (dragging && isTouch) {
       document.addEventListener('touchmove', handleGlobalTouchMove, { passive: false });
       document.addEventListener('touchend', handleGlobalTouchEnd, { passive: false });
     }
-
     return () => {
       document.removeEventListener('touchmove', handleGlobalTouchMove, { passive: false });
       document.removeEventListener('touchend', handleGlobalTouchEnd, { passive: false });
     };
   }, [dragging, isTouch, dragStart, dragEnd, roomId]);
 
-  // Add global mouse tracking for desktop
   useEffect(() => {
     function handleGlobalMouseMove(e) {
       if (dragging && !isTouch) {
@@ -132,8 +134,8 @@ function Game() {
         setDragEnd({ x, y });
       }
     }
-
     function handleGlobalMouseUp(e) {
+      console.log(`🖱️ Global mouse up: dragging=${dragging}, isTouch=${isTouch}, dragStart=${!!dragStart}, dragEnd=${!!dragEnd}`);
       if (dragging && !isTouch && dragStart && dragEnd) {
         const dx = dragStart.x - dragEnd.x;
         const dy = dragStart.y - dragEnd.y;
@@ -147,13 +149,13 @@ function Game() {
           vx *= scale;
           vy *= scale;
         }
+        console.log(`🚀 Global mouse up emitting ball-move: roomId=${roomId}, velocity=(${vx.toFixed(2)}, ${vy.toFixed(2)})`);
         socket.emit('ball-move', { roomId, velocity: { x: vx, y: vy } });
         setDragging(false);
         setDragStart(null);
         setDragEnd(null);
       }
     }
-
     if (dragging && !isTouch) {
       document.addEventListener('mousemove', handleGlobalMouseMove);
       document.addEventListener('mouseup', handleGlobalMouseUp);
@@ -164,94 +166,79 @@ function Game() {
     };
   }, [dragging, isTouch, dragStart, dragEnd, roomId]);
 
-  // Update handlePointerDown to not set isTouch for mouse
-  const handlePointerDown = (e) => {
-    if (!canShoot()) return;
-    
-    let clientX, clientY;
-    let isTouchEvent = false;
-    if (e.touches && e.touches.length === 1) {
-      setIsTouch(true);
-      clientX = e.touches[0].clientX;
-      clientY = e.touches[0].clientY;
-      isTouchEvent = true;
-    } else if (e.clientX !== undefined) {
-      setIsTouch(false);
-      clientX = e.clientX;
-      clientY = e.clientY;
-    } else {
-      return;
-    }
-    const { x, y } = getSvgCoords(clientX, clientY);
-    // Use a larger touch target for mobile/touch events
-    const affordanceRadius = isTouchEvent ? BALL_RADIUS + 24 : BALL_RADIUS + 10;
-    const dist = Math.hypot(x - ballPos.x, y - ballPos.y);
-    if (dist <= affordanceRadius) {
-      setDragging(true);
-      setDragStart({ x, y });
-      setDragEnd({ x, y });
-    }
-  };
-
-  // Update handlePointerMove to only handle touch
-  const handlePointerMove = (e) => {
-    if (!dragging || !isTouch) return;
-    let clientX, clientY;
-    if (e.touches && e.touches.length === 1) {
-      clientX = e.touches[0].clientX;
-      clientY = e.touches[0].clientY;
-    } else {
-      return;
-    }
-    const { x, y } = getSvgCoords(clientX, clientY);
-    setDragEnd({ x, y });
-  };
-
-  // Update handlePointerUp to only handle touch
-  const handlePointerUp = (e) => {
-    if (dragging && dragStart && dragEnd && isTouch) {
-      const dx = dragStart.x - dragEnd.x;
-      const dy = dragStart.y - dragEnd.y;
-      const velocityScale = 0.5;
-      let vx = dx * velocityScale;
-      let vy = dy * velocityScale;
-      
-      // Apply max speed limit
-      const maxSpeed = 40; // Increased to 40
-      const currentSpeed = Math.sqrt(vx * vx + vy * vy);
-      if (currentSpeed > maxSpeed) {
-        const scale = maxSpeed / currentSpeed;
-        vx *= scale;
-        vy *= scale;
-      }
-      
-      socket.emit('ball-move', { roomId, velocity: { x: vx, y: vy } });
-    }
-    setDragging(false);
-    setDragStart(null);
-    setDragEnd(null);
-  };
-
-  // Remove old mouse/touch handlers
-
   useEffect(() => {
+    function handleSocketError(err) {
+      console.error('❌ Socket error event:', err);
+      if (window && window.alert) {
+        window.alert('Socket error: ' + (err && err.message ? err.message : err));
+      }
+    }
+    socket.on('error', handleSocketError);
+    return () => {
+      socket.off('error', handleSocketError);
+    };
+  }, []);
+
+  // --- Handlers used in early return ---
+  const handleNameSubmit = (e) => {
+    e.preventDefault();
+    if (playerName.trim()) {
+      setNameSubmitted(true);
+      setShowNameDialog(false);
+    }
+  };
+
+  // Only allow shooting if it's this player's turn
+  const canShoot = () => {
+    const can = playerNumber === currentTurn;
+    console.log(`🎯 canShoot check: playerNumber=${playerNumber}, currentTurn=${currentTurn}, canShoot=${can}, playerNumberRef=${playerNumberRef.current}`);
+    return can;
+  };
+
+  // Convert screen coords to SVG coords
+  const getSvgCoords = (clientX, clientY) => {
+    const svg = svgRef.current;
+    const pt = svg.createSVGPoint();
+    pt.x = clientX;
+    pt.y = clientY;
+    const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
+    return { x: svgP.x, y: svgP.y };
+  };
+
+  // Add global touch tracking
+  useEffect(() => {
+    console.log('useEffect triggered with:', { roomId, nameSubmitted, playerName });
     if (roomId && nameSubmitted) {
+      console.log('Emitting join-room:', roomId, playerName); // Debug log
       socket.emit('join-room', { roomId, name: playerName });
       console.log('Joining room:', roomId, 'with name:', playerName);
+    } else {
+      console.log('NOT emitting join-room because:', { 
+        roomId: roomId, 
+        nameSubmitted: nameSubmitted, 
+        playerName: playerName 
+      });
     }
 
     socket.on('joined-room', ({ socketId, playerNumber, currentTurn, playerNames: names }) => {
-      setPlayerNumber(playerNumber);
-      setCurrentTurn(currentTurn);
-      setPlayerNames(names);
-      setShowNameDialog(false);
-      console.log(`✅ Joined as Player ${playerNumber} (socket ${socketId}), current turn: ${currentTurn}`);
+      console.log(`🎯 Setting playerNumber to ${playerNumber} for socket ${socketId} (my socket: ${socket.id})`);
+      if (socketId === socket.id) {
+        console.log(`✅ This is MY joined-room event`);
+        setPlayerNumber(playerNumber);
+        playerNumberRef.current = playerNumber;
+        setCurrentTurn(currentTurn);
+        setPlayerNames(names);
+        setShowNameDialog(false);
+        console.log(`✅ Joined as Player ${playerNumber} (socket ${socketId}), current turn: ${currentTurn}`);
+      } else {
+        console.log(`❌ This is NOT my joined-room event, ignoring`);
+      }
     });
 
     socket.on('turn-update', ({ currentTurn, playerNames: names }) => {
+      console.log(`🔄 Turn update: currentTurn = ${currentTurn}, playerNumber = ${playerNumberRef.current}, playerNames =`, names);
       setCurrentTurn(currentTurn);
       setPlayerNames(names);
-      console.log(`🔄 Turn update: currentTurn = ${currentTurn}, playerNumber = ${playerNumber}`);
     });
 
     socket.on('score-update', ({ score, playerNames: names }) => {
@@ -304,6 +291,12 @@ function Game() {
     };
   }, [roomId, nameSubmitted, playerName]);
 
+  // Debug playerNumber changes
+  useEffect(() => {
+    console.log(`🔍 playerNumber changed to: ${playerNumber} (stack trace: ${new Error().stack?.split('\n')[2]?.trim()})`);
+    playerNumberRef.current = playerNumber;
+  }, [playerNumber]);
+
   // Add global socket error handler for debugging
   useEffect(() => {
     function handleSocketError(err) {
@@ -318,15 +311,52 @@ function Game() {
     };
   }, []);
 
-  const handleRestart = () => {
-    socket.emit('restart-game', roomId);
+  // --- Handlers for pointer/touch events ---
+  const handlePointerDown = (e) => {
+    console.log(`👆 handlePointerDown called`);
+    if (typeof canShoot === 'function' && !canShoot()) {
+      console.log(`❌ handlePointerDown blocked by canShoot`);
+      return;
+    }
+    console.log(`✅ handlePointerDown proceeding`);
+    let clientX, clientY;
+    if (e.touches && e.touches.length === 1) {
+      if (typeof setIsTouch === 'function') setIsTouch(true);
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+    } else if (e.clientX !== undefined) {
+      if (typeof setIsTouch === 'function') setIsTouch(false);
+      clientX = e.clientX;
+      clientY = e.clientY;
+    } else {
+      return;
+    }
+    const { x, y } = getSvgCoords(clientX, clientY);
+    setDragging(true);
+    setDragStart({ x, y });
+    setDragEnd({ x, y });
   };
 
-  const handleNameSubmit = (e) => {
-    e.preventDefault();
-    if (playerName.trim()) {
-      setNameSubmitted(true);
+  const handlePointerMove = (e) => {
+    if (!dragging) return;
+    let clientX, clientY;
+    if (e.touches && e.touches.length === 1) {
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+    } else if (e.clientX !== undefined) {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    } else {
+      return;
     }
+    const { x, y } = getSvgCoords(clientX, clientY);
+    setDragEnd({ x, y });
+  };
+
+
+
+  const handleRestart = () => {
+    socket.emit('restart-game', roomId);
   };
 
   // Name input dialog
@@ -379,113 +409,74 @@ function Game() {
     );
   }
 
+  // Banner state logic (must be before any early returns)
+  // This block is now redundant as the hooks are moved to the top.
+  // Keeping it for now as per instructions, but it will be removed if not used.
+  // const [bannerState, setBannerState] = useState('shot');
+  // useEffect(() => {
+  //   if (!playerNames[1] || !playerNames[2]) {
+  //     setBannerState('waiting');
+  //   } else if (showGoalToast) {
+  //     setBannerState('goal');
+  //   } else if (gameOver) {
+  //     setBannerState('win');
+  //   } else {
+  //     setBannerState('shot');
+  //   }
+  // }, [playerNames, showGoalToast, gameOver]);
+
   return (
-    <div
-      style={{
-        width: '100vw',
-        height: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'flex-start',
-        background: '#fff', // set to white
-        overflow: 'hidden',
-        padding: 0,
-        margin: 0,
-      }}
-    >
-      <h1>Biñho</h1>
-      <div style={{ fontSize: '2em', fontWeight: 'bold', margin: '0.5em 0' }}>
-        {playerNames[1] || 'Player 1'} {score[1]} - {score[2]} {playerNames[2] || 'Player 2'}
-      </div>
-      <div style={{ fontSize: '1.2em', marginBottom: 10 }}>Room ID: {roomId}</div>
-      <div style={{ fontSize: '1.5em', color: '#333', marginBottom: 10 }}>
-        {playerNumber === currentTurn ? 'Your turn' : `${playerNames[currentTurn] || `Player ${currentTurn}`}'s turn`}
-      </div>
-      {/* Goal Toast Message */}
-      {showGoalToast && (
-        <div style={{
-          position: 'fixed',
-          top: '20%',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          background: 'linear-gradient(135deg, #4CAF50, #45a049)',
-          color: 'white',
-          padding: '15px 30px',
-          borderRadius: '25px',
-          fontSize: '1.5em',
-          fontWeight: 'bold',
-          boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
-          zIndex: 1001,
-          animation: 'slideInDown 0.3s ease-out'
-        }}>
-          {goalMessage}
-        </div>
-      )}
-      <div
-        style={{
-          flex: 1,
-          width: '100%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          position: 'relative',
-        }}
-      >
-        {/* Waiting for player overlay */}
-        {(!playerNames[1] || !playerNames[2]) && (
-          <div style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            background: 'rgba(0,0,0,0.6)',
-            zIndex: 100,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexDirection: 'column',
-            color: '#fff',
-            fontSize: '2em',
-            fontWeight: 'bold',
-            borderRadius: 20,
-            pointerEvents: 'none',
-            textAlign: 'center',
-          }}>
-            {playerNames[1] && !playerNames[2] && `Waiting for Player 2 to join...`}
-            {!playerNames[1] && playerNames[2] && `Waiting for Player 1 to join...`}
-            {!playerNames[1] && !playerNames[2] && `Waiting for another player to join...`}
+    <div className="gameplay-outer">
+      <div className="gameplay-stack">
+        <div className="scorebug-header">
+          <span className="scorebug-player-name" style={{textAlign:'left'}}>{playerNames[1] || 'Player 1'}</span>
+          <div className="scorebug-score">
+            <span className="scorebug-score-num">{score[1]}</span>
+            <span className="scorebug-score-divider">-</span>
+            <span className="scorebug-score-num">{score[2]}</span>
           </div>
-        )}
-        <GameField
-          FIELD_WIDTH={FIELD_WIDTH}
-          FIELD_HEIGHT={FIELD_HEIGHT}
-          PEG_RADIUS={PEG_RADIUS}
-          BALL_RADIUS={BALL_RADIUS}
-          pegs={pegs}
-          ballPos={ballPos}
-          dragging={dragging}
-          setDragging={setDragging}
-          dragStart={dragStart}
-          setDragStart={setDragStart}
-          dragEnd={dragEnd}
-          setDragEnd={setDragEnd}
-          isTouch={isTouch}
-          setIsTouch={setIsTouch}
+          <span className="scorebug-player-name" style={{textAlign:'right'}}>{playerNames[2] || 'Player 2'}</span>
+        </div>
+        <div className="game-field-shell">
+          <GameField
+            FIELD_WIDTH={FIELD_WIDTH}
+            FIELD_HEIGHT={FIELD_HEIGHT}
+            PEG_RADIUS={PEG_RADIUS}
+            BALL_RADIUS={BALL_RADIUS}
+            pegs={pegs}
+            ballPos={ballPos}
+            dragging={dragging}
+            setDragging={setDragging}
+            dragStart={dragStart}
+            setDragStart={setDragStart}
+            dragEnd={dragEnd}
+            setDragEnd={setDragEnd}
+            isTouch={isTouch}
+            setIsTouch={setIsTouch}
+            playerNumber={playerNumber}
+            canShoot={canShoot}
+            handleMouseDown={handlePointerDown}
+            handleMouseMove={handlePointerMove}
+            handleTouchStart={handlePointerDown}
+            handleTouchMove={handlePointerMove}
+            svgRef={svgRef}
+            ballAngle={ballAngle}
+            clutchActive={clutchActive}
+          />
+        </div>
+        <Banner
+          state={bannerState}
+          playerName={playerNames[currentTurn] || `p${currentTurn}`}
+          opponentName={playerNames[currentTurn === 1 ? 2 : 1]}
+          winnerName={playerNames[winner]}
+          goalMessage={goalMessage}
+          onGoalTimeout={() => setShowGoalToast(false)}
+          currentTurn={currentTurn}
           playerNumber={playerNumber}
-          canShoot={canShoot}
-          handleMouseDown={handlePointerDown}
-          handleMouseMove={handlePointerMove}
-          handleMouseUp={handlePointerUp}
-          handleTouchStart={handlePointerDown}
-          handleTouchMove={handlePointerMove}
-          handleTouchEnd={handlePointerUp}
-          svgRef={svgRef}
-          ballAngle={ballAngle}
-          clutchActive={clutchActive}
+          roomId={roomId}
         />
       </div>
+      {/* Remove old Goal Toast Message */}
       {gameOver && (
         <div style={{
           position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.7)', zIndex: 1000,

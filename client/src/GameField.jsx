@@ -23,16 +23,16 @@ function GameField({
   canShoot, // add this prop
   handleMouseDown,
   handleMouseMove,
-  handleMouseUp,
   handleTouchStart,
   handleTouchMove,
-  handleTouchEnd,
   svgRef,
   ballAngle = 0, // new prop for rotation
   clutchActive = false,
 }) {
   // Canvas ref for the ball
   const ballCanvasRef = useRef();
+  
+
   useEffect(() => {
     const canvas = ballCanvasRef.current;
     if (!canvas) return;
@@ -111,17 +111,54 @@ function GameField({
       box-shadow: 0 4px 24px #0006;
       max-width: 420px;
       max-height: 700px;
+      box-sizing: border-box;
+      min-height: 300px; /* Debug: Force minimum height */
     }
     @media (max-width: 700px) {
       .binho-field-container {
         width: 100vw !important;
+        height: 100% !important;
         max-width: 100vw !important;
-        height: auto !important;
-        max-height: 100vh !important;
+        max-height: 100% !important;
         aspect-ratio: 3/5;
         margin: 0 auto !important;
         box-shadow: none;
         border-radius: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-sizing: border-box;
+      }
+      .binho-field-container > svg {
+        width: 100vw !important;
+        height: 100% !important;
+        max-width: 100vw !important;
+        max-height: 100% !important;
+        display: block;
+        box-sizing: border-box;
+      }
+    }
+    @media (min-width: 701px) {
+      .binho-field-container {
+        width: 100%;
+        max-width: 420px;
+        max-height: 700px;
+        margin: 0 auto;
+        display: block;
+        box-shadow: 0 4px 24px #0006;
+        border-radius: 20px;
+        aspect-ratio: 3/5;
+        height: auto;
+        background: transparent;
+        box-sizing: border-box;
+      }
+      .binho-field-container > svg {
+        width: 100%;
+        max-width: 420px;
+        max-height: 700px;
+        height: auto;
+        display: block;
+        box-sizing: border-box;
       }
     }
   `;
@@ -161,7 +198,8 @@ function GameField({
   return (
     <>
       <style>{responsiveStyle}</style>
-      <div ref={containerRef} className="binho-field-container">
+              <div ref={containerRef} className="binho-field-container">
+
         {/* Grass background behind SVG */}
         <div
           style={{
@@ -170,7 +208,7 @@ function GameField({
             left: 0,
             width: '100%',
             height: '100%',
-            zIndex: 0,
+            zIndex: -1,
             backgroundImage: `url(${fieldTexture})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
@@ -184,21 +222,19 @@ function GameField({
           viewBox={`0 0 ${FIELD_WIDTH} ${FIELD_HEIGHT}`}
           width="100%"
           height="100%"
+
           style={{
-            background: 'transparent',
             borderRadius: 20,
             display: 'block',
             touchAction: 'none',
             transform: playerNumber === 2 ? 'rotate(180deg)' : 'none',
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            zIndex: 1,
+            position: 'relative',
+            margin: 'auto',
+            zIndex: 10,
           }}
           onMouseDown={handlePointerDown}
           onTouchStart={handlePointerDown}
           onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
           xmlns="http://www.w3.org/2000/svg"
         >
           {/* Arrowhead marker for drag line */}
@@ -209,6 +245,7 @@ function GameField({
           </defs>
           {/* Field outline */}
           <rect x="0" y="0" width={FIELD_WIDTH} height={FIELD_HEIGHT} rx="20" fill="none" stroke="#fff" strokeWidth="6" />
+
           {/* Center line */}
           <line x1={0} y1={FIELD_HEIGHT/2} x2={FIELD_WIDTH} y2={FIELD_HEIGHT/2} stroke="#fff" strokeWidth="3" />
           {/* Center circle (larger) */}
@@ -244,12 +281,15 @@ function GameField({
               wiggleX = perpX * clutchWiggle;
               wiggleY = perpY * clutchWiggle;
             }
+            // Calculate drag vector (no inversion needed since rotation handles visual correction)
+            let dx = dragStart.x - dragEnd.x;
+            let dy = dragStart.y - dragEnd.y;
             return (
               <line
                 x1={ballPos.x}
                 y1={ballPos.y}
-                x2={ballPos.x + (dragStart.x - dragEnd.x) + wiggleX}
-                y2={ballPos.y + (dragStart.y - dragEnd.y) + wiggleY}
+                x2={ballPos.x + dx + wiggleX}
+                y2={ballPos.y + dy + wiggleY}
                 stroke={clutchActive ? 'orange' : '#ff0'}
                 strokeWidth="4"
                 markerEnd="url(#arrowhead)"

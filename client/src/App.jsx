@@ -25,9 +25,12 @@ function App() {
   const handleCreateGame = async () => {
     setLoading(true);
     try {
-      // Use Railway backend in production, localhost in development
+      // Use environment variable for backend URL if available
+      const envBackendUrl = import.meta.env.VITE_BACKEND_URL;
       const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-      const apiBase = isLocal
+      const apiBase = envBackendUrl
+        ? envBackendUrl
+        : isLocal
         ? 'http://localhost:3001'
         : 'https://binho-production.up.railway.app';
       const res = await fetch(`${apiBase}/api/create-room`);
@@ -45,12 +48,15 @@ function App() {
   };
 
   return (
-    <div style={{ padding: '2rem', fontFamily: 'sans-serif' }}>
-      <h1>Biñho</h1>
-      <p>Check your browser console to confirm the socket is connected.</p>
-      <button onClick={handleCreateGame} disabled={loading} style={{ marginTop: '2rem', fontSize: '1.2em' }}>
-        {loading ? 'Creating Game...' : 'Create Game'}
+    <div className="home-bg">
+      <div className="home-overlay">
+        <div className="home-content">
+          <h1 className="home-title">Biñho</h1>
+          <button className="home-btn" onClick={handleCreateGame} disabled={loading}>
+            {loading ? 'Creating Game...' : 'Start Game'}
       </button>
+        </div>
+      </div>
     </div>
   );
 }
