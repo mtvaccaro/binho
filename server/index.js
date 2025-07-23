@@ -40,7 +40,7 @@ app.use(cors({
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: '*', // TEMP: allow all origins for debugging
+    origin: allowedOrigins,
     credentials: true
   }
 });
