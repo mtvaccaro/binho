@@ -6,30 +6,34 @@ const app = express();
 
 // Health check route for Railway and browsers
 app.get('/', (req, res) => {
-  res.send('Binho backend is running!');
+  res.status(200).json({ 
+    status: 'ok', 
+    message: 'Binho backend is running!',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Additional health check for Railway
+app.get('/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'healthy',
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString()
+  });
 });
 
 const allowedOrigins = [
   'https://binho.vercel.app',
   'http://localhost:5173',
   'http://localhost:3000',
-  /^https:\/\/[a-zA-Z0-9-]+--binho(-[a-zA-Z0-9-]+)?--mtvaccaros-projects\.vercel\.app$/,
-  /^https:\/\/[a-zA-Z0-9-]+-binho(-[a-zA-Z0-9-]+)?-mtvaccaros-projects\.vercel\.app$/,
-  /^https:\/\/[a-zA-Z0-9-]+\.vercel\.app$/
+  '*' // Temporarily allow all origins for debugging
 ];
 
 function dynamicCorsOrigin(origin, callback) {
   console.log('CORS origin:', origin);
-  if (!origin) {
-    console.log('CORS: No origin, allowing');
-    return callback(null, true);
-  }
-  if (allowedOrigins.some(o => (typeof o === 'string' ? o === origin : o.test(origin)))) {
-    console.log('CORS: Allowed', origin);
-    return callback(null, true);
-  }
-  console.log('CORS: Denied', origin);
-  return callback(new Error('Not allowed by CORS: ' + origin), false);
+  // Temporarily allow all origins for debugging
+  console.log('CORS: Allowing all origins for debugging');
+  return callback(null, true);
 }
 
 app.use(cors({
@@ -40,7 +44,7 @@ app.use(cors({
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: '*', // TEMP: allow all origins for debugging
+    origin: true, // Allow all origins for debugging
     credentials: true
   }
 });
@@ -353,9 +357,19 @@ io.on('connection', (socket) => {
   });
   
 
-const PORT = process.env.PORT || 3001;
-server.listen(3000, () => {
-  console.log('Server listening on port 3000');
+const PORT = process.env.PORT || 3000;
+
+// Add error handling for server startup
+server.on('error', (error) => {
+  console.error('Server error:', error);
+  if (error.code === 'EADDRINUSE') {
+    console.error(`Port ${PORT} is already in use`);
+  }
+});
+
+server.listen(PORT, () => {
+  console.log(`Server listening on port ${PORT}`);
+  console.log(`Health check available at: http://localhost:${PORT}/health`);
 });
 
 // Utility to generate a 4-character alphanumeric code
