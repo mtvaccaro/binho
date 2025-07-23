@@ -23,16 +23,16 @@ function GameField({
   canShoot, // add this prop
   handleMouseDown,
   handleMouseMove,
-  handleMouseUp,
   handleTouchStart,
   handleTouchMove,
-  handleTouchEnd,
   svgRef,
   ballAngle = 0, // new prop for rotation
   clutchActive = false,
 }) {
   // Canvas ref for the ball
   const ballCanvasRef = useRef();
+  
+
   useEffect(() => {
     const canvas = ballCanvasRef.current;
     if (!canvas) return;
@@ -112,6 +112,7 @@ function GameField({
       max-width: 420px;
       max-height: 700px;
       box-sizing: border-box;
+      min-height: 300px; /* Debug: Force minimum height */
     }
     @media (max-width: 700px) {
       .binho-field-container {
@@ -127,7 +128,6 @@ function GameField({
         align-items: center;
         justify-content: center;
         box-sizing: border-box;
-        margin-bottom: 100px !important;
       }
       .binho-field-container > svg {
         width: 100vw !important;
@@ -198,7 +198,8 @@ function GameField({
   return (
     <>
       <style>{responsiveStyle}</style>
-      <div ref={containerRef} className="binho-field-container">
+              <div ref={containerRef} className="binho-field-container">
+
         {/* Grass background behind SVG */}
         <div
           style={{
@@ -207,7 +208,7 @@ function GameField({
             left: 0,
             width: '100%',
             height: '100%',
-            zIndex: 0,
+            zIndex: -1,
             backgroundImage: `url(${fieldTexture})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
@@ -221,20 +222,19 @@ function GameField({
           viewBox={`0 0 ${FIELD_WIDTH} ${FIELD_HEIGHT}`}
           width="100%"
           height="100%"
+
           style={{
-            background: 'transparent',
             borderRadius: 20,
             display: 'block',
             touchAction: 'none',
             transform: playerNumber === 2 ? 'rotate(180deg)' : 'none',
-            position: 'static',
+            position: 'relative',
             margin: 'auto',
-            zIndex: 1,
+            zIndex: 10,
           }}
           onMouseDown={handlePointerDown}
           onTouchStart={handlePointerDown}
           onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
           xmlns="http://www.w3.org/2000/svg"
         >
           {/* Arrowhead marker for drag line */}
@@ -245,6 +245,7 @@ function GameField({
           </defs>
           {/* Field outline */}
           <rect x="0" y="0" width={FIELD_WIDTH} height={FIELD_HEIGHT} rx="20" fill="none" stroke="#fff" strokeWidth="6" />
+
           {/* Center line */}
           <line x1={0} y1={FIELD_HEIGHT/2} x2={FIELD_WIDTH} y2={FIELD_HEIGHT/2} stroke="#fff" strokeWidth="3" />
           {/* Center circle (larger) */}
@@ -280,13 +281,9 @@ function GameField({
               wiggleX = perpX * clutchWiggle;
               wiggleY = perpY * clutchWiggle;
             }
-            // Fix: Invert drag vector for Player 2 so arrow matches shot direction
+            // Calculate drag vector (no inversion needed since rotation handles visual correction)
             let dx = dragStart.x - dragEnd.x;
             let dy = dragStart.y - dragEnd.y;
-            if (playerNumber === 2) {
-              dx = -dx;
-              dy = -dy;
-            }
             return (
               <line
                 x1={ballPos.x}

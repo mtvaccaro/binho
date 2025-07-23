@@ -31,8 +31,8 @@ function App() {
       const apiBase = envBackendUrl
         ? envBackendUrl
         : isLocal
-          ? 'http://localhost:3001'
-          : 'https://binho-production.up.railway.app';
+        ? 'http://localhost:3001'
+        : 'https://binho-production.up.railway.app';
       const res = await fetch(`${apiBase}/api/create-room`);
       const data = await res.json();
       if (data.roomId) {
@@ -48,12 +48,15 @@ function App() {
   };
 
   return (
-    <div style={{ padding: '2rem', fontFamily: 'sans-serif' }}>
-      <h1>Biñho</h1>
-      <p>Check your browser console to confirm the socket is connected.</p>
-      <button onClick={handleCreateGame} disabled={loading} style={{ marginTop: '2rem', fontSize: '1.2em' }}>
-        {loading ? 'Creating Game...' : 'Create Game'}
+    <div className="home-bg">
+      <div className="home-overlay">
+        <div className="home-content">
+          <h1 className="home-title">Biñho</h1>
+          <button className="home-btn" onClick={handleCreateGame} disabled={loading}>
+            {loading ? 'Creating Game...' : 'Start Game'}
       </button>
+        </div>
+      </div>
     </div>
   );
 }

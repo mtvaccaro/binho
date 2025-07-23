@@ -7,8 +7,8 @@ const isLocal = window.location.hostname === "localhost" || window.location.host
 const backendUrl = envBackendUrl
   ? envBackendUrl
   : isLocal
-    ? "http://localhost:3001"
-    : "https://binho-production.up.railway.app";
+  ? "http://localhost:3001"
+  : "https://binho-production.up.railway.app";
 const socket = io(backendUrl);
 
 console.log('VITE_BACKEND_URL:', import.meta.env.VITE_BACKEND_URL);
