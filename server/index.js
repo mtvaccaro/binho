@@ -12,21 +12,15 @@ app.get('/', (req, res) => {
 const allowedOrigins = [
   'https://binho.vercel.app',
   'http://localhost:5173',
-  'http://localhost:3000'
+  'http://localhost:3000',
+  '*' // Temporarily allow all origins for debugging
 ];
 
 function dynamicCorsOrigin(origin, callback) {
   console.log('CORS origin:', origin);
-  if (!origin) {
-    console.log('CORS: No origin, allowing');
-    return callback(null, true);
-  }
-  if (allowedOrigins.includes(origin)) {
-    console.log('CORS: Allowed', origin);
-    return callback(null, true);
-  }
-  console.log('CORS: Denied', origin);
-  return callback(new Error('Not allowed by CORS: ' + origin), false);
+  // Temporarily allow all origins for debugging
+  console.log('CORS: Allowing all origins for debugging');
+  return callback(null, true);
 }
 
 app.use(cors({
@@ -37,7 +31,7 @@ app.use(cors({
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: allowedOrigins,
+    origin: true, // Allow all origins for debugging
     credentials: true
   }
 });
