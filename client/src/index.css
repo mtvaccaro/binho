@@ -1,3 +1,28 @@
+/* Font declarations */
+@font-face {
+  font-family: 'Avigea';
+  src: url('./assets/fonts/Avigea.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Avigea Italic';
+  src: url('./assets/fonts/Avigea Italic.otf') format('opentype');
+  font-weight: normal;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'CalSans-Semibold';
+  src: url('./assets/fonts/CalSans-SemiBold.otf') format('opentype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
