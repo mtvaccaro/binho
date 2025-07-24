@@ -40,7 +40,7 @@ export default function Banner({
   }, [state, onGoalTimeout]);
 
   const handleCopyLink = async () => {
-    const gameUrl = `${window.location.origin}?room=${roomId}`;
+    const gameUrl = `${window.location.origin}/play/${roomId}`;
     const success = await copyToClipboard(gameUrl);
     if (success) {
       // Could add a toast notification here
