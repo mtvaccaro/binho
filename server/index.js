@@ -176,8 +176,10 @@ io.on('connection', (socket) => {
       }
       
       console.log(`🎯 Room ${roomId} players after join:`, roomPlayers[roomId]);
+      console.log(`🎯 Checking if both players are present:`, roomPlayers[roomId][0], '&&', roomPlayers[roomId][1]);
       // Check if this is the second player joining (exiting sandbox mode)
       if (roomPlayers[roomId][0] && roomPlayers[roomId][1]) {
+        console.log(`🎯 Both players detected! Exiting sandbox mode for room ${roomId}`);
         // Both players are now in the room, exit sandbox mode
         roomSandboxMode[roomId] = false;
         // Reset ball to starting position for real game
