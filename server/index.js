@@ -24,6 +24,7 @@ app.get('/health', (req, res) => {
 
 const allowedOrigins = [
   'https://binho.vercel.app',
+  'https://binho-git-sandbox-practice-mode-mtvaccaros-projects.vercel.app',
   'http://localhost:5173',
   'http://localhost:3000'
 ];
@@ -67,6 +68,8 @@ const roomScores = {}; // { roomId: { 1: 0, 2: 0 } }
 
 // Add ball state and physics per room
 const roomBall = {}; // { roomId: { pos: {x, y}, vel: {x, y}, interval: ref } }
+// Add sandbox mode tracking per room
+const roomSandboxMode = {}; // { roomId: boolean }
 const FRICTION = 0.96; // Increased friction for quicker ball slowdown
 const MIN_VELOCITY = 0.5;
 const PHYSICS_TICK = 1000 / 60; // 60Hz
@@ -107,6 +110,7 @@ io.on('connection', (socket) => {
     console.log('a user connected:', socket.id);
   
     socket.on('join-room', ({ roomId, name }) => {
+      console.log(`🎯 JOIN-ROOM: Socket ${socket.id} joining room ${roomId} with name: ${name}`);
       socket.join(roomId);
       console.log(`Socket ${socket.id} joined room ${roomId} with name: ${name}`);
       if (!roomPlayers[roomId]) roomPlayers[roomId] = [null, null];
@@ -167,6 +171,41 @@ io.on('connection', (socket) => {
           interval: null,
         };
       }
+      
+      // Initialize sandbox mode if not present
+      if (!roomSandboxMode[roomId]) {
+        roomSandboxMode[roomId] = true; // Start in sandbox mode
+      }
+      
+      console.log(`🎯 Room ${roomId} players after join:`, roomPlayers[roomId]);
+      console.log(`🎯 Checking if both players are present:`, roomPlayers[roomId][0], '&&', roomPlayers[roomId][1]);
+      // Check if this is the second player joining (exiting sandbox mode)
+      if (roomPlayers[roomId][0] && roomPlayers[roomId][1]) {
+        console.log(`🎯 Both players detected! Exiting sandbox mode for room ${roomId}`);
+        // Both players are now in the room, exit sandbox mode
+        roomSandboxMode[roomId] = false;
+        // Reset ball to starting position for real game
+        roomBall[roomId].pos = { x: 210, y: 350 };
+        roomBall[roomId].vel = { x: 0, y: 0 };
+        // Reset score to 0-0 when real game starts
+        roomScores[roomId] = { 1: 0, 2: 0 };
+        // Ensure Player 1 gets the first shot
+        roomTurns[roomId] = 1;
+        console.log(`🎯 Both players joined, exiting sandbox mode for room ${roomId}`);
+        console.log(`🎯 Emitting player-joined with score:`, roomScores[roomId]);
+        // Emit player-joined event to notify clients
+        io.to(roomId).emit('player-joined', {
+          playerNames: roomNames[roomId],
+          currentTurn: roomTurns[roomId],
+          ballPos: roomBall[roomId].pos,
+          score: roomScores[roomId]
+        });
+        // Also emit score update to reset any sandbox scores
+        console.log(`🎯 Emitting score-update with score:`, roomScores[roomId]);
+        io.to(roomId).emit('score-update', { score: roomScores[roomId], playerNames: roomNames[roomId] });
+        io.to(roomId).emit('turn-update', { currentTurn: roomTurns[roomId], playerNames: roomNames[roomId] });
+      }
+      
       // Send current ball position to joining player
       io.to(socket.id).emit('ball-move', { ballPos: roomBall[roomId].pos });
     });
@@ -217,30 +256,48 @@ io.on('connection', (socket) => {
             scoringPlayer = 2;
           }
           if (goalScored) {
-            if (!roomScores[roomId]) roomScores[roomId] = { 1: 0, 2: 0 };
-            roomScores[roomId][scoringPlayer] += 1;
-            // Check for game over
-            if (roomScores[roomId][scoringPlayer] >= WINNING_SCORE) {
-              // Game over
+            console.log(`🎯 Goal scored in room ${roomId}, sandbox mode:`, roomSandboxMode[roomId]);
+            // Check if we're in sandbox mode
+            if (roomSandboxMode[roomId]) {
+              console.log(`🎯 Sandbox goal scored by Player ${scoringPlayer} in room ${roomId}`);
+              // Sandbox goal - just reset ball without affecting score
+              ball.pos = { x: FIELD_WIDTH / 2, y: FIELD_HEIGHT / 2 };
+              ball.vel = { x: 0, y: 0 };
+              // Stop physics loop
               clearInterval(ball.interval);
               ball.interval = null;
-              io.to(roomId).emit('game-over', { winner: scoringPlayer, score: roomScores[roomId], playerNames: roomNames[roomId] });
+              // Emit sandbox goal event
+              io.to(roomId).emit('sandbox-goal', { ballPos: ball.pos });
+              io.to(roomId).emit('ball-move', { ballPos: ball.pos });
+              return;
+            } else {
+              console.log(`🎯 Real goal scored by Player ${scoringPlayer} in room ${roomId}`);
+              // Real goal - update score and game state
+              if (!roomScores[roomId]) roomScores[roomId] = { 1: 0, 2: 0 };
+              roomScores[roomId][scoringPlayer] += 1;
+              // Check for game over
+              if (roomScores[roomId][scoringPlayer] >= WINNING_SCORE) {
+                // Game over
+                clearInterval(ball.interval);
+                ball.interval = null;
+                io.to(roomId).emit('game-over', { winner: scoringPlayer, score: roomScores[roomId], playerNames: roomNames[roomId] });
+                return;
+              }
+              // Reset ball to center
+              ball.pos = { x: FIELD_WIDTH / 2, y: FIELD_HEIGHT / 2 };
+              ball.vel = { x: 0, y: 0 };
+              // Stop physics loop
+              clearInterval(ball.interval);
+              ball.interval = null;
+              // Next turn is the player who conceded the goal
+              let nextTurn = scoringPlayer === 1 ? 2 : 1;
+              roomTurns[roomId] = nextTurn;
+              io.to(roomId).emit('goal', { scoringPlayer, score: roomScores[roomId], ballPos: ball.pos, playerNames: roomNames[roomId] });
+              io.to(roomId).emit('ball-move', { ballPos: ball.pos });
+              io.to(roomId).emit('turn-update', { currentTurn: nextTurn, playerNames: roomNames[roomId] });
+              io.to(roomId).emit('score-update', { score: roomScores[roomId], playerNames: roomNames[roomId] });
               return;
             }
-            // Reset ball to center
-            ball.pos = { x: FIELD_WIDTH / 2, y: FIELD_HEIGHT / 2 };
-            ball.vel = { x: 0, y: 0 };
-            // Stop physics loop
-            clearInterval(ball.interval);
-            ball.interval = null;
-            // Next turn is the player who conceded the goal
-            let nextTurn = scoringPlayer === 1 ? 2 : 1;
-            roomTurns[roomId] = nextTurn;
-            io.to(roomId).emit('goal', { scoringPlayer, score: roomScores[roomId], ballPos: ball.pos, playerNames: roomNames[roomId] });
-            io.to(roomId).emit('ball-move', { ballPos: ball.pos });
-            io.to(roomId).emit('turn-update', { currentTurn: nextTurn, playerNames: roomNames[roomId] });
-            io.to(roomId).emit('score-update', { score: roomScores[roomId], playerNames: roomNames[roomId] });
-            return;
           }
           // 2. Peg collision and ricochet
           for (const peg of pegs) {
@@ -307,10 +364,19 @@ io.on('connection', (socket) => {
         roomPlayers[roomId] = [roomPlayers[roomId][0] || null, roomPlayers[roomId][1] || null];
         roomPlayers[roomId].length = 2;
         console.log(`[LEAVE AFTER] roomPlayers[${roomId}]:`, roomPlayers[roomId]);
+        
+        // Check if we're back to one player (re-enter sandbox mode)
+        if ((roomPlayers[roomId][0] && !roomPlayers[roomId][1]) || (!roomPlayers[roomId][0] && roomPlayers[roomId][1])) {
+          // Only one player left, re-enter sandbox mode
+          roomSandboxMode[roomId] = true;
+          console.log(`Re-entering sandbox mode for room ${roomId}`);
+        }
+        
         if (!roomPlayers[roomId][0] && !roomPlayers[roomId][1]) {
           delete roomPlayers[roomId];
           delete roomTurns[roomId];
           delete roomNames[roomId];
+          delete roomSandboxMode[roomId];
         }
       }
       console.log(`Socket ${socket.id} left room ${roomId}`);
@@ -352,10 +418,19 @@ io.on('connection', (socket) => {
         roomPlayers[roomId] = [roomPlayers[roomId][0] || null, roomPlayers[roomId][1] || null];
         roomPlayers[roomId].length = 2;
         console.log(`[DISCONNECT AFTER] roomPlayers[${roomId}]:`, roomPlayers[roomId]);
+        
+        // Check if we're back to one player (re-enter sandbox mode)
+        if ((roomPlayers[roomId][0] && !roomPlayers[roomId][1]) || (!roomPlayers[roomId][0] && roomPlayers[roomId][1])) {
+          // Only one player left, re-enter sandbox mode
+          roomSandboxMode[roomId] = true;
+          console.log(`Re-entering sandbox mode for room ${roomId} due to disconnect`);
+        }
+        
         if (!roomPlayers[roomId][0] && !roomPlayers[roomId][1]) {
           delete roomPlayers[roomId];
           delete roomTurns[roomId];
           delete roomNames[roomId];
+          delete roomSandboxMode[roomId];
         }
       }
       console.log('user disconnected:', socket.id);
