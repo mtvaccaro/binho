@@ -186,6 +186,8 @@ io.on('connection', (socket) => {
         roomScores[roomId] = { 1: 0, 2: 0 };
         // Ensure Player 1 gets the first shot
         roomTurns[roomId] = 1;
+        console.log(`🎯 Both players joined, exiting sandbox mode for room ${roomId}`);
+        console.log(`🎯 Emitting player-joined with score:`, roomScores[roomId]);
         // Emit player-joined event to notify clients
         io.to(roomId).emit('player-joined', {
           playerNames: roomNames[roomId],
@@ -194,6 +196,7 @@ io.on('connection', (socket) => {
           score: roomScores[roomId]
         });
         // Also emit score update to reset any sandbox scores
+        console.log(`🎯 Emitting score-update with score:`, roomScores[roomId]);
         io.to(roomId).emit('score-update', { score: roomScores[roomId], playerNames: roomNames[roomId] });
         io.to(roomId).emit('turn-update', { currentTurn: roomTurns[roomId], playerNames: roomNames[roomId] });
       }

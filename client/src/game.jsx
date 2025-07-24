@@ -249,6 +249,8 @@ function Game() {
     // Handle when another player joins (exiting sandbox mode)
     socket.on('player-joined', ({ playerNames: names, currentTurn, ballPos, score }) => {
       console.log(`🎯 Another player joined, exiting sandbox mode`);
+      console.log(`🎯 Received score:`, score);
+      console.log(`🎯 Current score state:`, score);
       setPlayerNames(names);
       setCurrentTurn(currentTurn);
       setSandboxMode(false);
@@ -264,6 +266,7 @@ function Game() {
     });
 
     socket.on('score-update', ({ score, playerNames: names }) => {
+      console.log(`🎯 Score update received:`, score);
       setScore(score);
       setPlayerNames(names);
     });
