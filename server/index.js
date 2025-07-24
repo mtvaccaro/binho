@@ -109,6 +109,7 @@ io.on('connection', (socket) => {
     console.log('a user connected:', socket.id);
   
     socket.on('join-room', ({ roomId, name }) => {
+      console.log(`🎯 JOIN-ROOM: Socket ${socket.id} joining room ${roomId} with name: ${name}`);
       socket.join(roomId);
       console.log(`Socket ${socket.id} joined room ${roomId} with name: ${name}`);
       if (!roomPlayers[roomId]) roomPlayers[roomId] = [null, null];
