@@ -27,6 +27,12 @@ function Game() {
   const [showNameDialog, setShowNameDialog] = useState(true);
   const [playerName, setPlayerName] = useState('');
   const [nameSubmitted, setNameSubmitted] = useState(false);
+  const [sandboxMode, setSandboxMode] = useState(false);
+  const [realGameState, setRealGameState] = useState({
+    ballPos: { x: 420 / 2, y: 700 / 2 },
+    score: { 1: 0, 2: 0 },
+    currentTurn: 1
+  });
   const lastBallPos = useRef(ballPos);
   const ballAngleRef = useRef(0);
   const [ballAngle, setBallAngle] = useState(0);
@@ -54,12 +60,17 @@ function Game() {
   useEffect(() => {
     if (!playerNames[1] || !playerNames[2]) {
       setBannerState('waiting');
+      // Enable sandbox mode when waiting for opponent
+      setSandboxMode(true);
     } else if (showGoalToast) {
       setBannerState('goal');
+      setSandboxMode(false);
     } else if (gameOver) {
       setBannerState('win');
+      setSandboxMode(false);
     } else {
       setBannerState('shot');
+      setSandboxMode(false);
     }
   }, [playerNames, showGoalToast, gameOver]);
 
@@ -188,10 +199,10 @@ function Game() {
     }
   };
 
-  // Only allow shooting if it's this player's turn
+  // Allow shooting if it's this player's turn OR if we're in sandbox mode
   const canShoot = () => {
-    const can = playerNumber === currentTurn;
-    console.log(`🎯 canShoot check: playerNumber=${playerNumber}, currentTurn=${currentTurn}, canShoot=${can}, playerNumberRef=${playerNumberRef.current}`);
+    const can = sandboxMode || playerNumber === currentTurn;
+    console.log(`🎯 canShoot check: playerNumber=${playerNumber}, currentTurn=${currentTurn}, sandboxMode=${sandboxMode}, canShoot=${can}, playerNumberRef=${playerNumberRef.current}`);
     return can;
   };
 
@@ -235,6 +246,17 @@ function Game() {
       }
     });
 
+    // Handle when another player joins (exiting sandbox mode)
+    socket.on('player-joined', ({ playerNames: names, currentTurn, ballPos, score }) => {
+      console.log(`🎯 Another player joined, exiting sandbox mode`);
+      setPlayerNames(names);
+      setCurrentTurn(currentTurn);
+      setSandboxMode(false);
+      // Reset ball to starting position when real game begins
+      setBallPos({ x: 420 / 2, y: 700 / 2 });
+      setScore(score);
+    });
+
     socket.on('turn-update', ({ currentTurn, playerNames: names }) => {
       console.log(`🔄 Turn update: currentTurn = ${currentTurn}, playerNumber = ${playerNumberRef.current}, playerNames =`, names);
       setCurrentTurn(currentTurn);
@@ -267,6 +289,12 @@ function Game() {
       setTimeout(() => { isSyncingRef.current = false; }, 0);
     });
 
+    // Handle sandbox goals (reset ball without affecting score)
+    socket.on('sandbox-goal', ({ ballPos }) => {
+      console.log(`🎯 Sandbox goal scored, resetting ball`);
+      setBallPos(ballPos);
+    });
+
     // Game over dialog
     // Show when a player reaches WIN_SCORE
     socket.on('game-over', ({ winner, score, playerNames: names }) => {
@@ -282,9 +310,11 @@ function Game() {
     return () => {
       socket.emit('leave-room', roomId);
       socket.off('joined-room');
+      socket.off('player-joined');
       socket.off('turn-update');
       socket.off('score-update');
       socket.off('goal');
+      socket.off('sandbox-goal');
       socket.off('ball-move');
       socket.off('game-over');
       socket.off('game-restarted');
@@ -474,6 +504,7 @@ function Game() {
           currentTurn={currentTurn}
           playerNumber={playerNumber}
           roomId={roomId}
+          sandboxMode={sandboxMode}
         />
       </div>
       {/* Remove old Goal Toast Message */}

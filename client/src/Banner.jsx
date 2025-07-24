@@ -29,6 +29,7 @@ export default function Banner({
   currentTurn = 1,
   playerNumber = null,
   roomId = '',
+  sandboxMode = false,
 }) {
   useEffect(() => {
     if (state === 'goal') {
@@ -107,9 +108,9 @@ export default function Banner({
           </div>
           <div className="banner-content">
             <div className="banner-text">
-              <span className="player-name">Anybody Home?</span>
+              <span className="player-name">Waiting for Opponent</span>
             </div>
-            <div className="banner-subtext">Waiting for Opponent</div>
+            <div className="banner-subtext">Warm up with some practice shots</div>
           </div>
           <button 
             className="banner-copy-button"
