@@ -182,13 +182,20 @@ io.on('connection', (socket) => {
         // Reset ball to starting position for real game
         roomBall[roomId].pos = { x: 210, y: 350 };
         roomBall[roomId].vel = { x: 0, y: 0 };
+        // Reset score to 0-0 when real game starts
+        roomScores[roomId] = { 1: 0, 2: 0 };
+        // Ensure Player 1 gets the first shot
+        roomTurns[roomId] = 1;
         // Emit player-joined event to notify clients
         io.to(roomId).emit('player-joined', {
           playerNames: roomNames[roomId],
           currentTurn: roomTurns[roomId],
           ballPos: roomBall[roomId].pos,
-          score: roomScores[roomId] || { 1: 0, 2: 0 }
+          score: roomScores[roomId]
         });
+        // Also emit score update to reset any sandbox scores
+        io.to(roomId).emit('score-update', { score: roomScores[roomId], playerNames: roomNames[roomId] });
+        io.to(roomId).emit('turn-update', { currentTurn: roomTurns[roomId], playerNames: roomNames[roomId] });
       }
       
       // Send current ball position to joining player
@@ -243,6 +250,7 @@ io.on('connection', (socket) => {
           if (goalScored) {
             // Check if we're in sandbox mode
             if (roomSandboxMode[roomId]) {
+              console.log(`🎯 Sandbox goal scored by Player ${scoringPlayer} in room ${roomId}`);
               // Sandbox goal - just reset ball without affecting score
               ball.pos = { x: FIELD_WIDTH / 2, y: FIELD_HEIGHT / 2 };
               ball.vel = { x: 0, y: 0 };
@@ -254,6 +262,7 @@ io.on('connection', (socket) => {
               io.to(roomId).emit('ball-move', { ballPos: ball.pos });
               return;
             } else {
+              console.log(`🎯 Real goal scored by Player ${scoringPlayer} in room ${roomId}`);
               // Real goal - update score and game state
               if (!roomScores[roomId]) roomScores[roomId] = { 1: 0, 2: 0 };
               roomScores[roomId][scoringPlayer] += 1;
