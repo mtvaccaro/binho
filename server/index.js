@@ -175,6 +175,7 @@ io.on('connection', (socket) => {
         roomSandboxMode[roomId] = true; // Start in sandbox mode
       }
       
+      console.log(`🎯 Room ${roomId} players after join:`, roomPlayers[roomId]);
       // Check if this is the second player joining (exiting sandbox mode)
       if (roomPlayers[roomId][0] && roomPlayers[roomId][1]) {
         // Both players are now in the room, exit sandbox mode
@@ -251,6 +252,7 @@ io.on('connection', (socket) => {
             scoringPlayer = 2;
           }
           if (goalScored) {
+            console.log(`🎯 Goal scored in room ${roomId}, sandbox mode:`, roomSandboxMode[roomId]);
             // Check if we're in sandbox mode
             if (roomSandboxMode[roomId]) {
               console.log(`🎯 Sandbox goal scored by Player ${scoringPlayer} in room ${roomId}`);
