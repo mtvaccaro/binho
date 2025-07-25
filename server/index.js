@@ -24,9 +24,12 @@ app.get('/health', (req, res) => {
 
 const allowedOrigins = [
   'https://binho.vercel.app',
-  'https://binho-git-sandbox-practice-mode-mtvaccaros-projects.vercel.app',
+  'https://binho-production.up.railway.app',
+  'https://binho-preview.up.railway.app',
   'http://localhost:5173',
-  'http://localhost:3000'
+  'http://localhost:3000',
+  // Regex for Vercel preview branches
+  /^https:\/\/binho-git-.*-mtvaccaros-projects\.vercel\.app$/
 ];
 
 function dynamicCorsOrigin(origin, callback) {
@@ -35,7 +38,10 @@ function dynamicCorsOrigin(origin, callback) {
     console.log('CORS: No origin, allowing');
     return callback(null, true);
   }
-  if (allowedOrigins.includes(origin)) {
+  if (
+    allowedOrigins.includes(origin) ||
+    allowedOrigins.some(o => o instanceof RegExp && o.test(origin))
+  ) {
     console.log('CORS: Allowed', origin);
     return callback(null, true);
   }
@@ -51,7 +57,7 @@ app.use(cors({
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: allowedOrigins,
+    origin: (origin, callback) => dynamicCorsOrigin(origin, callback),
     credentials: true
   }
 });
