@@ -152,11 +152,7 @@ function Game() {
           let vx = dx * velocityScale;
           let vy = dy * velocityScale;
           
-          // For Player 2, we need to invert the velocity to account for the 180-degree rotation
-          if (playerNumber === 2) {
-            vx = -vx;
-            vy = -vy;
-          }
+
           
           const maxSpeed = 40;
           const currentSpeed = Math.sqrt(vx * vx + vy * vy);
@@ -199,11 +195,7 @@ function Game() {
         let vx = dx * velocityScale;
         let vy = dy * velocityScale;
         
-        // For Player 2, we need to invert the velocity to account for the 180-degree rotation
-        if (playerNumber === 2) {
-          vx = -vx;
-          vy = -vy;
-        }
+
         
         const maxSpeed = 40;
         const currentSpeed = Math.sqrt(vx * vx + vy * vy);
