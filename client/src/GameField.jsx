@@ -99,59 +99,44 @@ function GameField({
   // Responsive CSS for desktop/mobile
   const responsiveStyle = `
     .binho-field-container {
-      width: 100%;
-      height: 100%;
-      aspect-ratio: 3/5;
       position: relative;
       background: transparent;
       border-radius: 20px;
       overflow: hidden;
       margin: 0 auto;
-      display: block;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       box-shadow: 0 4px 24px #0006;
-      max-width: 420px;
-      max-height: 700px;
       box-sizing: border-box;
-      min-height: 300px;
       
-      /* Use modern viewport units for better mobile support */
-      width: min(100vw, 420px);
-      height: min(100vh, 700px);
+      /* Mobile-first: Use available viewport space */
+      width: 100vw;
+      height: 100vh;
+      max-width: 100vw;
+      max-height: 100vh;
       
-      /* Ensure it fits within safe areas */
-      width: min(100vw, 100dvw, 420px);
-      height: min(100vh, 100dvh, 700px);
+      /* Account for safe areas */
+      width: 100dvw;
+      height: 100dvh;
+      max-width: 100dvw;
+      max-height: 100dvh;
+      
+      /* Ensure minimum usable size */
+      min-width: 300px;
+      min-height: 400px;
     }
     
-    /* Mobile-first approach */
-    @media (max-width: 700px) {
-      .binho-field-container {
-        width: min(100vw, 100dvw, 420px) !important;
-        height: min(100vh, 100dvh, 700px) !important;
-        max-width: min(100vw, 100dvw, 420px) !important;
-        max-height: min(100vh, 100dvh, 700px) !important;
-        aspect-ratio: 3/5;
-        margin: 0 auto !important;
-        box-shadow: none;
-        border-radius: 20px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        box-sizing: border-box;
-        
-        /* Prevent overflow */
-        overflow: hidden;
-      }
-      
-      .binho-field-container > svg {
-        width: 100% !important;
-        height: 100% !important;
-        max-width: 100% !important;
-        max-height: 100% !important;
-        display: block;
-        box-sizing: border-box;
-        object-fit: contain;
-      }
+    .binho-field-container > svg {
+      width: 100%;
+      height: 100%;
+      max-width: 100%;
+      max-height: 100%;
+      display: block;
+      box-sizing: border-box;
+      object-fit: contain;
+      /* Maintain aspect ratio within container */
+      aspect-ratio: 3/5;
     }
     
     /* Desktop styles */
@@ -177,16 +162,36 @@ function GameField({
         height: auto;
         display: block;
         box-sizing: border-box;
+        aspect-ratio: auto;
+      }
+    }
+    
+    /* Handle very small screens */
+    @media (max-width: 400px) {
+      .binho-field-container {
+        width: 100vw !important;
+        height: 100vh !important;
+        max-width: 100vw !important;
+        max-height: 100vh !important;
+        border-radius: 0;
+        box-shadow: none;
+      }
+      
+      .binho-field-container > svg {
+        width: 100% !important;
+        height: 100% !important;
+        max-width: 100% !important;
+        max-height: 100% !important;
       }
     }
     
     /* Handle orientation changes */
     @media (orientation: landscape) and (max-height: 500px) {
       .binho-field-container {
-        width: min(100vw, 100dvw, 300px) !important;
-        height: min(100vh, 100dvh, 500px) !important;
-        max-width: min(100vw, 100dvw, 300px) !important;
-        max-height: min(100vh, 100dvh, 500px) !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        max-width: 100vw !important;
+        max-height: 100vh !important;
       }
     }
     
