@@ -318,9 +318,15 @@ function GameField({
               wiggleX = perpX * clutchWiggle;
               wiggleY = perpY * clutchWiggle;
             }
-            // Calculate drag vector (no inversion needed since rotation handles visual correction)
+            // Calculate drag vector - for Player 2, we need to invert the arrow direction to match the actual ball velocity
             let dx = dragStart.x - dragEnd.x;
             let dy = dragStart.y - dragEnd.y;
+            
+            // For Player 2, invert the arrow direction to match the actual ball velocity
+            if (playerNumber === 2) {
+              dx = -dx;
+              dy = -dy;
+            }
             return (
               <line
                 x1={ballPos.x}
