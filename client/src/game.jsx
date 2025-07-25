@@ -54,7 +54,12 @@ function Game() {
   ];
   const bottomPegs = topPegs.map(peg => ({ x: peg.x, y: FIELD_HEIGHT - peg.y }));
   const pegs = [...topPegs, ...bottomPegs];
-  const clutchActive = false;
+  const WIN_SCORE = 3;
+  
+  // Clutch mode: activate when either player is one goal away from winning
+  const clutchActive = (score[1] === WIN_SCORE - 1 && score[2] === WIN_SCORE - 1) || 
+                      (score[1] === WIN_SCORE - 1 && score[2] < WIN_SCORE - 1) || 
+                      (score[2] === WIN_SCORE - 1 && score[1] < WIN_SCORE - 1);
 
   // --- Effects ---
   useEffect(() => {
@@ -396,8 +401,10 @@ function Game() {
     // Game over dialog
     // Show when a player reaches WIN_SCORE
     socket.on('game-over', ({ winner, score, playerNames: names }) => {
+      console.log(`🎯 Game over received: winner=${winner}, score=`, score);
       setGameOver(true);
       setWinner(winner);
+      setScore(score); // Update the score to show the final result
       setPlayerNames(names);
     });
     socket.on('game-restarted', () => {
@@ -614,7 +621,7 @@ function Game() {
           <div style={{ background: '#fff', padding: 40, borderRadius: 20, boxShadow: '0 4px 24px #0008', textAlign: 'center' }}>
             <h2 style={{ fontSize: '2em', marginBottom: 20 }}>Game Over</h2>
             <div style={{ fontSize: '1.5em', marginBottom: 20 }}>
-              {playerNames[winner] || `Player ${winner}`} wins!
+              {playerNames[winner] || `Player ${winner}`} wins {score[1]}-{score[2]}!
             </div>
             <button onClick={handleRestart} style={{ fontSize: '1.2em', padding: '0.7em 2em', borderRadius: 10, background: '#222', color: '#fff', border: 'none', cursor: 'pointer' }}>
               Restart Game
