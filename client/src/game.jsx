@@ -371,18 +371,33 @@ function Game() {
     });
 
     socket.on('turn-update', ({ currentTurn, playerNames: names }) => {
-      console.log(`🔄 Turn update: currentTurn = ${currentTurn}, playerNumber = ${playerNumberRef.current}, playerNames =`, names);
+      console.log(`🔄 Turn update received by Player ${playerNumberRef.current}:`, {
+        currentTurn,
+        playerNames: names,
+        myPlayerNumber: playerNumberRef.current
+      });
       setCurrentTurn(currentTurn);
       setPlayerNames(names);
     });
 
     socket.on('score-update', ({ score, playerNames: names }) => {
-      console.log(`🎯 Score update received:`, score);
+      console.log(`🎯 Score update received by Player ${playerNumberRef.current}:`, {
+        score,
+        playerNames: names,
+        myPlayerNumber: playerNumberRef.current
+      });
       setScore(score);
       setPlayerNames(names);
     });
 
     socket.on('goal', ({ scoringPlayer, score, ballPos, playerNames: names }) => {
+      console.log(`🎯 GOAL EVENT RECEIVED by Player ${playerNumberRef.current}:`, {
+        scoringPlayer,
+        score,
+        ballPos,
+        playerNames: names,
+        myPlayerNumber: playerNumberRef.current
+      });
       setScore(score);
       setBallPos(ballPos);
       setPlayerNames(names);
@@ -398,6 +413,10 @@ function Game() {
 
     // Listen for ball-move events from server
     socket.on('ball-move', ({ ballPos }) => {
+      console.log(`🎯 Ball move received by Player ${playerNumberRef.current}:`, {
+        ballPos,
+        myPlayerNumber: playerNumberRef.current
+      });
       isSyncingRef.current = true;
       setBallPos(ballPos);
       setTimeout(() => { isSyncingRef.current = false; }, 0);

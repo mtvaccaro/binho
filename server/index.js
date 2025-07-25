@@ -303,6 +303,9 @@ io.on('connection', (socket) => {
           }
           if (goalScored) {
             console.log(`🎯 Goal scored in room ${roomId}, sandbox mode:`, roomSandboxMode[roomId]);
+            console.log(`🎯 Current room players:`, roomPlayers[roomId]);
+            console.log(`🎯 Current room names:`, roomNames[roomId]);
+            
             // Check if we're in sandbox mode
             if (roomSandboxMode[roomId]) {
               console.log(`🎯 Sandbox goal scored by Player ${scoringPlayer} in room ${roomId}`);
@@ -313,6 +316,7 @@ io.on('connection', (socket) => {
               clearInterval(ball.interval);
               ball.interval = null;
               // Emit sandbox goal event
+              console.log(`🎯 Emitting sandbox-goal to room ${roomId}`);
               io.to(roomId).emit('sandbox-goal', { ballPos: ball.pos });
               io.to(roomId).emit('ball-move', { ballPos: ball.pos });
               return;
@@ -321,11 +325,14 @@ io.on('connection', (socket) => {
               // Real goal - update score and game state
               if (!roomScores[roomId]) roomScores[roomId] = { 1: 0, 2: 0 };
               roomScores[roomId][scoringPlayer] += 1;
+              console.log(`🎯 Updated score for room ${roomId}:`, roomScores[roomId]);
+              
               // Check for game over
               if (roomScores[roomId][scoringPlayer] >= WINNING_SCORE) {
                 // Game over
                 clearInterval(ball.interval);
                 ball.interval = null;
+                console.log(`🎯 Game over! Winner: Player ${scoringPlayer}`);
                 io.to(roomId).emit('game-over', { winner: scoringPlayer, score: roomScores[roomId], playerNames: roomNames[roomId] });
                 return;
               }
@@ -338,6 +345,14 @@ io.on('connection', (socket) => {
               // Next turn is the player who conceded the goal
               let nextTurn = scoringPlayer === 1 ? 2 : 1;
               roomTurns[roomId] = nextTurn;
+              console.log(`🎯 Next turn set to Player ${nextTurn} for room ${roomId}`);
+              
+              console.log(`🎯 Emitting goal event to room ${roomId} with data:`, {
+                scoringPlayer,
+                score: roomScores[roomId],
+                ballPos: ball.pos,
+                playerNames: roomNames[roomId]
+              });
               io.to(roomId).emit('goal', { scoringPlayer, score: roomScores[roomId], ballPos: ball.pos, playerNames: roomNames[roomId] });
               io.to(roomId).emit('ball-move', { ballPos: ball.pos });
               io.to(roomId).emit('turn-update', { currentTurn: nextTurn, playerNames: roomNames[roomId] });
