@@ -325,6 +325,11 @@ function Game() {
   // Add global touch tracking
   useEffect(() => {
     console.log('useEffect triggered with:', { roomId, nameSubmitted, playerName });
+    console.log('Socket connection status:', { 
+      connected: socket.connected, 
+      id: socket.id,
+      backendUrl: socket.io.uri 
+    });
     if (roomId && nameSubmitted) {
       console.log('Emitting join-room:', roomId, playerName); // Debug log
       socket.emit('join-room', { roomId, name: playerName });
