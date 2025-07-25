@@ -56,9 +56,10 @@ function Game() {
   const pegs = [...topPegs, ...bottomPegs];
   const WIN_SCORE = 3;
   
-  // Clutch mode: activate only for the player who is about to win
+  // Clutch mode: activate when either player is about to win OR when both players are at 2-2
   const clutchActive = (playerNumber === 1 && score[1] === WIN_SCORE - 1 && score[2] < WIN_SCORE - 1) || 
-                      (playerNumber === 2 && score[2] === WIN_SCORE - 1 && score[1] < WIN_SCORE - 1);
+                      (playerNumber === 2 && score[2] === WIN_SCORE - 1 && score[1] < WIN_SCORE - 1) ||
+                      (score[1] === 2 && score[2] === 2);
 
   // --- Effects ---
   useEffect(() => {
@@ -618,8 +619,8 @@ function Game() {
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
         }}>
           <div style={{ background: '#fff', padding: 40, borderRadius: 20, boxShadow: '0 4px 24px #0008', textAlign: 'center' }}>
-            <h2 style={{ fontSize: '2em', marginBottom: 20 }}>Game Over</h2>
-            <div style={{ fontSize: '1.5em', marginBottom: 20 }}>
+            <h2 style={{ fontSize: '2em', marginBottom: 20, color: '#333' }}>Game Over</h2>
+            <div style={{ fontSize: '1.5em', marginBottom: 20, color: '#333' }}>
               {playerNames[winner] || `Player ${winner}`} wins {score[1]}-{score[2]}!
             </div>
             <button onClick={handleRestart} style={{ fontSize: '1.2em', padding: '0.7em 2em', borderRadius: 10, background: '#222', color: '#fff', border: 'none', cursor: 'pointer' }}>
