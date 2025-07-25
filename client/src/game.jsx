@@ -56,10 +56,9 @@ function Game() {
   const pegs = [...topPegs, ...bottomPegs];
   const WIN_SCORE = 3;
   
-  // Clutch mode: activate when either player is one goal away from winning
-  const clutchActive = (score[1] === WIN_SCORE - 1 && score[2] === WIN_SCORE - 1) || 
-                      (score[1] === WIN_SCORE - 1 && score[2] < WIN_SCORE - 1) || 
-                      (score[2] === WIN_SCORE - 1 && score[1] < WIN_SCORE - 1);
+  // Clutch mode: activate only for the player who is about to win
+  const clutchActive = (playerNumber === 1 && score[1] === WIN_SCORE - 1 && score[2] < WIN_SCORE - 1) || 
+                      (playerNumber === 2 && score[2] === WIN_SCORE - 1 && score[1] < WIN_SCORE - 1);
 
   // --- Effects ---
   useEffect(() => {
