@@ -212,25 +212,7 @@ function GameField({
   }
 
   // Allow drag from anywhere on the field
-  const handlePointerDown = (e) => {
-    if (typeof canShoot === 'function' && !canShoot()) return;
-    let clientX, clientY;
-    if (e.touches && e.touches.length === 1) {
-      if (typeof setIsTouch === 'function') setIsTouch(true);
-      clientX = e.touches[0].clientX;
-      clientY = e.touches[0].clientY;
-    } else if (e.clientX !== undefined) {
-      if (typeof setIsTouch === 'function') setIsTouch(false);
-      clientX = e.clientX;
-      clientY = e.clientY;
-    } else {
-      return;
-    }
-    const { x, y } = getSvgCoords(clientX, clientY);
-    setDragging(true);
-    setDragStart({ x, y });
-    setDragEnd({ x, y });
-  };
+
 
   return (
     <>
@@ -269,8 +251,8 @@ function GameField({
             margin: 'auto',
             zIndex: 10,
           }}
-          onMouseDown={handlePointerDown}
-          onTouchStart={handlePointerDown}
+          onMouseDown={handleMouseDown}
+          onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           xmlns="http://www.w3.org/2000/svg"
         >
