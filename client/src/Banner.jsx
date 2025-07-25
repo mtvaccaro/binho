@@ -108,15 +108,14 @@ export default function Banner({
           </div>
           <div className="banner-content">
             <div className="banner-text">
-              <span className="player-name">Waiting for Opponent</span>
+              <span className="player-name">Waiting...</span>
             </div>
-            <div className="banner-subtext">Warm up with some practice shots</div>
           </div>
           <button 
             className="banner-copy-button"
             onClick={handleCopyLink}
           >
-            Copy Link to Game
+            Copy Link
           </button>
         </>
       ) : (
