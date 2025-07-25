@@ -303,12 +303,6 @@ function GameField({
             // Calculate drag vector - the arrow should point in the direction the ball will travel
             let dx = dragStart.x - dragEnd.x;
             let dy = dragStart.y - dragEnd.y;
-            
-            // For Player 2, invert the arrow direction to match the inverted velocity
-            if (playerNumber === 2) {
-              dx = -dx;
-              dy = -dy;
-            }
             return (
               <line
                 x1={ballPos.x}
