@@ -54,9 +54,47 @@ function Game() {
   ];
   const bottomPegs = topPegs.map(peg => ({ x: peg.x, y: FIELD_HEIGHT - peg.y }));
   const pegs = [...topPegs, ...bottomPegs];
-  const clutchActive = false;
+  const WIN_SCORE = 3;
+  
+  // Clutch mode: activate when either player is about to win OR when both players are at 2-2
+  const clutchActive = (playerNumber === 1 && score[1] === WIN_SCORE - 1 && score[2] < WIN_SCORE - 1) || 
+                      (playerNumber === 2 && score[2] === WIN_SCORE - 1 && score[1] < WIN_SCORE - 1) ||
+                      (score[1] === 2 && score[2] === 2);
 
   // --- Effects ---
+  useEffect(() => {
+    // Handle viewport changes for mobile browsers
+    const handleViewportChange = () => {
+      // Force a reflow to ensure proper sizing
+      const container = document.querySelector('.binho-field-container');
+      if (container) {
+        container.style.display = 'none';
+        container.offsetHeight; // Force reflow
+        container.style.display = 'flex';
+      }
+    };
+
+    // Listen for orientation changes and resize events
+    window.addEventListener('orientationchange', handleViewportChange);
+    window.addEventListener('resize', handleViewportChange);
+    
+    // Handle visual viewport changes (Safari URL bar, etc.)
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', handleViewportChange);
+    }
+
+    // Initial call to ensure proper sizing
+    handleViewportChange();
+
+    return () => {
+      window.removeEventListener('orientationchange', handleViewportChange);
+      window.removeEventListener('resize', handleViewportChange);
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', handleViewportChange);
+      }
+    };
+  }, []);
+
   useEffect(() => {
     if (!playerNames[1] || !playerNames[2]) {
       setBannerState('waiting');
@@ -206,6 +244,68 @@ function Game() {
     return can;
   };
 
+  // Debug socket connection status
+  useEffect(() => {
+    console.log('🔌 Socket connection status:', {
+      connected: socket.connected,
+      id: socket.id,
+      backendUrl: socket.io.uri
+    });
+  }, []);
+
+  // Dynamic height calculation for mobile viewport
+  useEffect(() => {
+    const calculateFieldHeight = () => {
+      const header = document.querySelector('.scorebug-header');
+      const banner = document.querySelector('.banner');
+      const gameplayStack = document.querySelector('.gameplay-stack');
+      
+      if (header && banner && gameplayStack) {
+        const headerHeight = header.offsetHeight;
+        const bannerHeight = banner.offsetHeight;
+        const stackPadding = parseInt(window.getComputedStyle(gameplayStack).paddingTop) + 
+                            parseInt(window.getComputedStyle(gameplayStack).paddingBottom);
+        const stackGap = parseInt(window.getComputedStyle(gameplayStack).gap) || 16;
+        
+        // Calculate available height for the field
+        const availableHeight = window.innerHeight - headerHeight - bannerHeight - stackPadding - stackGap;
+        
+        // Set the field shell height
+        const fieldShell = document.querySelector('.game-field-shell');
+        if (fieldShell) {
+          fieldShell.style.height = `${Math.max(availableHeight, 300)}px`;
+          console.log('📏 Field height calculated:', {
+            windowHeight: window.innerHeight,
+            headerHeight,
+            bannerHeight,
+            stackPadding,
+            stackGap,
+            availableHeight,
+            finalHeight: Math.max(availableHeight, 300)
+          });
+        }
+      }
+    };
+
+    // Calculate on mount and resize
+    calculateFieldHeight();
+    window.addEventListener('resize', calculateFieldHeight);
+    window.addEventListener('orientationchange', calculateFieldHeight);
+    
+    // Handle visual viewport changes (Safari URL bar, etc.)
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', calculateFieldHeight);
+    }
+
+    return () => {
+      window.removeEventListener('resize', calculateFieldHeight);
+      window.removeEventListener('orientationchange', calculateFieldHeight);
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', calculateFieldHeight);
+      }
+    };
+  }, []);
+
   // Convert screen coords to SVG coords
   const getSvgCoords = (clientX, clientY) => {
     const svg = svgRef.current;
@@ -301,8 +401,10 @@ function Game() {
     // Game over dialog
     // Show when a player reaches WIN_SCORE
     socket.on('game-over', ({ winner, score, playerNames: names }) => {
+      console.log(`🎯 Game over received: winner=${winner}, score=`, score);
       setGameOver(true);
       setWinner(winner);
+      setScore(score); // Update the score to show the final result
       setPlayerNames(names);
     });
     socket.on('game-restarted', () => {
@@ -468,7 +570,7 @@ function Game() {
             <span className="scorebug-score-divider">-</span>
             <span className="scorebug-score-num">{score[2]}</span>
           </div>
-          <span className="scorebug-player-name" style={{textAlign:'right'}}>{playerNames[2] || 'Player 2'}</span>
+          <span className="scorebug-player-name" style={{textAlign:'right'}}>{playerNames[2] || 'Waiting...'}</span>
         </div>
         <div className="game-field-shell">
           <GameField
@@ -517,9 +619,9 @@ function Game() {
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
         }}>
           <div style={{ background: '#fff', padding: 40, borderRadius: 20, boxShadow: '0 4px 24px #0008', textAlign: 'center' }}>
-            <h2 style={{ fontSize: '2em', marginBottom: 20 }}>Game Over</h2>
-            <div style={{ fontSize: '1.5em', marginBottom: 20 }}>
-              {playerNames[winner] || `Player ${winner}`} wins!
+            <h2 style={{ fontSize: '2em', marginBottom: 20, color: '#333' }}>Game Over</h2>
+            <div style={{ fontSize: '1.5em', marginBottom: 20, color: '#333' }}>
+              {playerNames[winner] || `Player ${winner}`} wins {score[1]}-{score[2]}!
             </div>
             <button onClick={handleRestart} style={{ fontSize: '1.2em', padding: '0.7em 2em', borderRadius: 10, background: '#222', color: '#fff', border: 'none', cursor: 'pointer' }}>
               Restart Game

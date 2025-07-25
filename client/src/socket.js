@@ -11,6 +11,8 @@ const backendUrl = envBackendUrl
   : "https://binho-production.up.railway.app";
 const socket = io(backendUrl);
 
+console.log('Socket connecting to:', backendUrl);
+
 console.log('VITE_BACKEND_URL:', import.meta.env.VITE_BACKEND_URL);
 
 // Add connection error and reconnect event listeners for debugging
