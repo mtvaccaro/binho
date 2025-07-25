@@ -563,7 +563,7 @@ function Game() {
             <span className="scorebug-score-divider">-</span>
             <span className="scorebug-score-num">{score[2]}</span>
           </div>
-          <span className="scorebug-player-name" style={{textAlign:'right'}}>{playerNames[2] || 'Player 2'}</span>
+          <span className="scorebug-player-name" style={{textAlign:'right'}}>{playerNames[2] || 'Waiting...'}</span>
         </div>
         <div className="game-field-shell">
           <GameField
