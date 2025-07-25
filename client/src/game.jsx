@@ -58,6 +58,39 @@ function Game() {
 
   // --- Effects ---
   useEffect(() => {
+    // Handle viewport changes for mobile browsers
+    const handleViewportChange = () => {
+      // Force a reflow to ensure proper sizing
+      const container = document.querySelector('.binho-field-container');
+      if (container) {
+        container.style.display = 'none';
+        container.offsetHeight; // Force reflow
+        container.style.display = 'flex';
+      }
+    };
+
+    // Listen for orientation changes and resize events
+    window.addEventListener('orientationchange', handleViewportChange);
+    window.addEventListener('resize', handleViewportChange);
+    
+    // Handle visual viewport changes (Safari URL bar, etc.)
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', handleViewportChange);
+    }
+
+    // Initial call to ensure proper sizing
+    handleViewportChange();
+
+    return () => {
+      window.removeEventListener('orientationchange', handleViewportChange);
+      window.removeEventListener('resize', handleViewportChange);
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', handleViewportChange);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     if (!playerNames[1] || !playerNames[2]) {
       setBannerState('waiting');
       // Enable sandbox mode when waiting for opponent

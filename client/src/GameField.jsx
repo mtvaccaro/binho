@@ -112,14 +112,24 @@ function GameField({
       max-width: 420px;
       max-height: 700px;
       box-sizing: border-box;
-      min-height: 300px; /* Debug: Force minimum height */
+      min-height: 300px;
+      
+      /* Use modern viewport units for better mobile support */
+      width: min(100vw, 420px);
+      height: min(100vh, 700px);
+      
+      /* Ensure it fits within safe areas */
+      width: min(100vw, 100dvw, 420px);
+      height: min(100vh, 100dvh, 700px);
     }
+    
+    /* Mobile-first approach */
     @media (max-width: 700px) {
       .binho-field-container {
-        width: 100vw !important;
-        height: 100% !important;
-        max-width: 100vw !important;
-        max-height: 100% !important;
+        width: min(100vw, 100dvw, 420px) !important;
+        height: min(100vh, 100dvh, 700px) !important;
+        max-width: min(100vw, 100dvw, 420px) !important;
+        max-height: min(100vh, 100dvh, 700px) !important;
         aspect-ratio: 3/5;
         margin: 0 auto !important;
         box-shadow: none;
@@ -128,16 +138,23 @@ function GameField({
         align-items: center;
         justify-content: center;
         box-sizing: border-box;
+        
+        /* Prevent overflow */
+        overflow: hidden;
       }
+      
       .binho-field-container > svg {
-        width: 100vw !important;
+        width: 100% !important;
         height: 100% !important;
-        max-width: 100vw !important;
+        max-width: 100% !important;
         max-height: 100% !important;
         display: block;
         box-sizing: border-box;
+        object-fit: contain;
       }
     }
+    
+    /* Desktop styles */
     @media (min-width: 701px) {
       .binho-field-container {
         width: 100%;
@@ -152,6 +169,7 @@ function GameField({
         background: transparent;
         box-sizing: border-box;
       }
+      
       .binho-field-container > svg {
         width: 100%;
         max-width: 420px;
@@ -159,6 +177,26 @@ function GameField({
         height: auto;
         display: block;
         box-sizing: border-box;
+      }
+    }
+    
+    /* Handle orientation changes */
+    @media (orientation: landscape) and (max-height: 500px) {
+      .binho-field-container {
+        width: min(100vw, 100dvw, 300px) !important;
+        height: min(100vh, 100dvh, 500px) !important;
+        max-width: min(100vw, 100dvw, 300px) !important;
+        max-height: min(100vh, 100dvh, 500px) !important;
+      }
+    }
+    
+    /* Support for devices with notches/safe areas */
+    @supports (padding: max(0px)) {
+      .binho-field-container {
+        padding-left: max(0px, env(safe-area-inset-left));
+        padding-right: max(0px, env(safe-area-inset-right));
+        padding-top: max(0px, env(safe-area-inset-top));
+        padding-bottom: max(0px, env(safe-area-inset-bottom));
       }
     }
   `;

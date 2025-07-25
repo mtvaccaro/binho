@@ -63,6 +63,20 @@ html, body, #root {
   padding: 0;
   overflow: hidden;
   overflow-x: hidden;
+  
+  /* Better mobile support */
+  width: 100dvw;
+  height: 100dvh;
+  min-height: 100dvh;
+  
+  /* Prevent zoom on double-tap */
+  touch-action: manipulation;
+  
+  /* Handle safe areas */
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 h1 {
