@@ -110,21 +110,15 @@ function GameField({
       box-shadow: 0 4px 24px #0006;
       box-sizing: border-box;
       
-      /* Mobile-first: Use available viewport space */
-      width: 100vw;
-      height: 100vh;
-      max-width: 100vw;
-      max-height: 100vh;
-      
-      /* Account for safe areas */
-      width: 100dvw;
-      height: 100dvh;
-      max-width: 100dvw;
-      max-height: 100dvh;
+      /* Fill the available space in the container */
+      width: 100%;
+      height: 100%;
+      max-width: 100%;
+      max-height: 100%;
       
       /* Ensure minimum usable size */
       min-width: 300px;
-      min-height: 400px;
+      min-height: 200px;
     }
     
     .binho-field-container > svg {
@@ -169,11 +163,11 @@ function GameField({
     /* Handle very small screens */
     @media (max-width: 400px) {
       .binho-field-container {
-        width: 100vw !important;
-        height: 100vh !important;
-        max-width: 100vw !important;
-        max-height: 100vh !important;
-        border-radius: 0;
+        width: 100% !important;
+        height: 100% !important;
+        max-width: 100% !important;
+        max-height: 100% !important;
+        border-radius: 12px;
         box-shadow: none;
       }
       
@@ -188,10 +182,10 @@ function GameField({
     /* Handle orientation changes */
     @media (orientation: landscape) and (max-height: 500px) {
       .binho-field-container {
-        width: 100vw !important;
-        height: 100vh !important;
-        max-width: 100vw !important;
-        max-height: 100vh !important;
+        width: 100% !important;
+        height: 100% !important;
+        max-width: 100% !important;
+        max-height: 100% !important;
       }
     }
     

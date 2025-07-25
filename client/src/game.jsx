@@ -248,6 +248,59 @@ function Game() {
     });
   }, []);
 
+  // Dynamic height calculation for mobile viewport
+  useEffect(() => {
+    const calculateFieldHeight = () => {
+      const header = document.querySelector('.scorebug-header');
+      const banner = document.querySelector('.banner');
+      const gameplayStack = document.querySelector('.gameplay-stack');
+      
+      if (header && banner && gameplayStack) {
+        const headerHeight = header.offsetHeight;
+        const bannerHeight = banner.offsetHeight;
+        const stackPadding = parseInt(window.getComputedStyle(gameplayStack).paddingTop) + 
+                            parseInt(window.getComputedStyle(gameplayStack).paddingBottom);
+        const stackGap = parseInt(window.getComputedStyle(gameplayStack).gap) || 16;
+        
+        // Calculate available height for the field
+        const availableHeight = window.innerHeight - headerHeight - bannerHeight - stackPadding - stackGap;
+        
+        // Set the field shell height
+        const fieldShell = document.querySelector('.game-field-shell');
+        if (fieldShell) {
+          fieldShell.style.height = `${Math.max(availableHeight, 300)}px`;
+          console.log('📏 Field height calculated:', {
+            windowHeight: window.innerHeight,
+            headerHeight,
+            bannerHeight,
+            stackPadding,
+            stackGap,
+            availableHeight,
+            finalHeight: Math.max(availableHeight, 300)
+          });
+        }
+      }
+    };
+
+    // Calculate on mount and resize
+    calculateFieldHeight();
+    window.addEventListener('resize', calculateFieldHeight);
+    window.addEventListener('orientationchange', calculateFieldHeight);
+    
+    // Handle visual viewport changes (Safari URL bar, etc.)
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', calculateFieldHeight);
+    }
+
+    return () => {
+      window.removeEventListener('resize', calculateFieldHeight);
+      window.removeEventListener('orientationchange', calculateFieldHeight);
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', calculateFieldHeight);
+      }
+    };
+  }, []);
+
   // Convert screen coords to SVG coords
   const getSvgCoords = (clientX, clientY) => {
     const svg = svgRef.current;
