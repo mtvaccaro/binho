@@ -239,6 +239,15 @@ function Game() {
     return can;
   };
 
+  // Debug socket connection status
+  useEffect(() => {
+    console.log('🔌 Socket connection status:', {
+      connected: socket.connected,
+      id: socket.id,
+      backendUrl: socket.io.uri
+    });
+  }, []);
+
   // Convert screen coords to SVG coords
   const getSvgCoords = (clientX, clientY) => {
     const svg = svgRef.current;
