@@ -76,6 +76,10 @@ const roomScores = {}; // { roomId: { 1: 0, 2: 0 } }
 const roomBall = {}; // { roomId: { pos: {x, y}, vel: {x, y}, interval: ref } }
 // Add sandbox mode tracking per room
 const roomSandboxMode = {}; // { roomId: boolean }
+
+// Add disconnect tracking with grace period
+const disconnectedPlayers = {}; // { roomId: { socketId: timestamp } }
+const DISCONNECT_GRACE_PERIOD = 30000; // 30 seconds grace period
 const FRICTION = 0.96; // Increased friction for quicker ball slowdown
 const MIN_VELOCITY = 0.5;
 const PHYSICS_TICK = 1000 / 60; // 60Hz
@@ -130,7 +134,32 @@ io.on('connection', (socket) => {
       if (!roomNames[roomId]) roomNames[roomId] = { 1: '', 2: '' };
       console.log(`[BEFORE JOIN] roomPlayers[${roomId}]:`, roomPlayers[roomId]);
       console.log(`[BEFORE JOIN] roomNames[${roomId}]:`, roomNames[roomId]);
-      // Remove socket ID from both slots if present
+      
+      // Check if this socket is already in the room
+      const existingSlot = roomPlayers[roomId].indexOf(socket.id);
+      if (existingSlot !== -1) {
+        // This socket is already in the room, just update the name and return
+        console.log(`Socket ${socket.id} already in room at slot ${existingSlot + 1}, updating name`);
+        roomNames[roomId][existingSlot + 1] = name;
+        const playerNumber = existingSlot + 1;
+        
+        // Clear disconnected status if this is a reconnection
+        if (disconnectedPlayers[roomId] && disconnectedPlayers[roomId][socket.id]) {
+          console.log(`Clearing disconnected status for socket ${socket.id} in room ${roomId}`);
+          delete disconnectedPlayers[roomId][socket.id];
+        }
+        
+        io.to(socket.id).emit('joined-room', {
+          socketId: socket.id,
+          playerNumber,
+          currentTurn: roomTurns[roomId],
+          playerNames: roomNames[roomId]
+        });
+        io.to(roomId).emit('turn-update', { currentTurn: roomTurns[roomId], playerNames: roomNames[roomId] });
+        return;
+      }
+      
+      // Remove socket ID from both slots if present (for reconnection scenarios)
       if (roomPlayers[roomId][0] === socket.id) roomPlayers[roomId][0] = null;
       if (roomPlayers[roomId][1] === socket.id) roomPlayers[roomId][1] = null;
       // Ensure both slots are present
@@ -139,19 +168,23 @@ io.on('connection', (socket) => {
       console.log(`[AFTER CLEANUP] roomPlayers[${roomId}]:`, roomPlayers[roomId]);
       // Assign to first available slot
       let assignedSlot = -1;
+      console.log(`🎯 Attempting to assign ${name} (socket ${socket.id}) to room ${roomId}`);
+      console.log(`🎯 Current room state: slot 0 = ${roomPlayers[roomId][0]}, slot 1 = ${roomPlayers[roomId][1]}`);
+      console.log(`🎯 Disconnected players in this room:`, disconnectedPlayers[roomId] || {});
+      
       if (roomPlayers[roomId][0] == null) {
         roomPlayers[roomId][0] = socket.id;
         roomNames[roomId][1] = name;
         assignedSlot = 0;
-        console.log(`Assigned ${name} to slot 1 (Player 1)`);
+        console.log(`🎯 Assigned ${name} to slot 1 (Player 1)`);
       } else if (roomPlayers[roomId][1] == null) {
         roomPlayers[roomId][1] = socket.id;
         roomNames[roomId][2] = name;
         assignedSlot = 1;
-        console.log(`Assigned ${name} to slot 2 (Player 2)`);
+        console.log(`🎯 Assigned ${name} to slot 2 (Player 2)`);
       } else {
         // Room full
-        console.log('Room full, cannot join:', roomId);
+        console.log('🎯 Room full, cannot join:', roomId);
         io.to(socket.id).emit('joined-room', { socketId: socket.id, playerNumber: null, currentTurn: null, playerNames: {} });
         return;
       }
@@ -371,25 +404,42 @@ io.on('connection', (socket) => {
       socket.leave(roomId);
       if (roomPlayers[roomId]) {
         console.log(`[LEAVE BEFORE] roomPlayers[${roomId}]:`, roomPlayers[roomId]);
-        if (roomPlayers[roomId][0] === socket.id) roomPlayers[roomId][0] = null;
-        if (roomPlayers[roomId][1] === socket.id) roomPlayers[roomId][1] = null;
-        // Ensure both slots are present
-        roomPlayers[roomId] = [roomPlayers[roomId][0] || null, roomPlayers[roomId][1] || null];
-        roomPlayers[roomId].length = 2;
-        console.log(`[LEAVE AFTER] roomPlayers[${roomId}]:`, roomPlayers[roomId]);
         
-        // Check if we're back to one player (re-enter sandbox mode)
-        if ((roomPlayers[roomId][0] && !roomPlayers[roomId][1]) || (!roomPlayers[roomId][0] && roomPlayers[roomId][1])) {
-          // Only one player left, re-enter sandbox mode
-          roomSandboxMode[roomId] = true;
-          console.log(`Re-entering sandbox mode for room ${roomId}`);
-        }
-        
-        if (!roomPlayers[roomId][0] && !roomPlayers[roomId][1]) {
-          delete roomPlayers[roomId];
-          delete roomTurns[roomId];
-          delete roomNames[roomId];
-          delete roomSandboxMode[roomId];
+        // Mark this player as disconnected with timestamp instead of immediately removing
+        if (roomPlayers[roomId][0] === socket.id || roomPlayers[roomId][1] === socket.id) {
+          if (!disconnectedPlayers[roomId]) {
+            disconnectedPlayers[roomId] = {};
+          }
+          disconnectedPlayers[roomId][socket.id] = Date.now();
+          console.log(`Marked socket ${socket.id} as disconnected in room ${roomId} with grace period (leave-room)`);
+          
+          // Schedule removal after grace period
+          setTimeout(() => {
+            if (disconnectedPlayers[roomId] && disconnectedPlayers[roomId][socket.id]) {
+              console.log(`Grace period expired for socket ${socket.id} in room ${roomId}, removing from room (leave-room)`);
+              delete disconnectedPlayers[roomId][socket.id];
+              
+              // Now actually remove the player from the room
+              if (roomPlayers[roomId][0] === socket.id) roomPlayers[roomId][0] = null;
+              if (roomPlayers[roomId][1] === socket.id) roomPlayers[roomId][1] = null;
+              roomPlayers[roomId] = [roomPlayers[roomId][0] || null, roomPlayers[roomId][1] || null];
+              roomPlayers[roomId].length = 2;
+              
+              // Check if we're back to one player (re-enter sandbox mode)
+              if ((roomPlayers[roomId][0] && !roomPlayers[roomId][1]) || (!roomPlayers[roomId][0] && roomPlayers[roomId][1])) {
+                roomSandboxMode[roomId] = true;
+                console.log(`Re-entering sandbox mode for room ${roomId} after grace period (leave-room)`);
+              }
+              
+              if (!roomPlayers[roomId][0] && !roomPlayers[roomId][1]) {
+                delete roomPlayers[roomId];
+                delete roomTurns[roomId];
+                delete roomNames[roomId];
+                delete roomSandboxMode[roomId];
+                delete disconnectedPlayers[roomId];
+              }
+            }
+          }, DISCONNECT_GRACE_PERIOD);
         }
       }
       console.log(`Socket ${socket.id} left room ${roomId}`);
@@ -425,25 +475,42 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => {
       for (const roomId in roomPlayers) {
         console.log(`[DISCONNECT BEFORE] roomPlayers[${roomId}]:`, roomPlayers[roomId]);
-        if (roomPlayers[roomId][0] === socket.id) roomPlayers[roomId][0] = null;
-        if (roomPlayers[roomId][1] === socket.id) roomPlayers[roomId][1] = null;
-        // Ensure both slots are present
-        roomPlayers[roomId] = [roomPlayers[roomId][0] || null, roomPlayers[roomId][1] || null];
-        roomPlayers[roomId].length = 2;
-        console.log(`[DISCONNECT AFTER] roomPlayers[${roomId}]:`, roomPlayers[roomId]);
         
-        // Check if we're back to one player (re-enter sandbox mode)
-        if ((roomPlayers[roomId][0] && !roomPlayers[roomId][1]) || (!roomPlayers[roomId][0] && roomPlayers[roomId][1])) {
-          // Only one player left, re-enter sandbox mode
-          roomSandboxMode[roomId] = true;
-          console.log(`Re-entering sandbox mode for room ${roomId} due to disconnect`);
-        }
-        
-        if (!roomPlayers[roomId][0] && !roomPlayers[roomId][1]) {
-          delete roomPlayers[roomId];
-          delete roomTurns[roomId];
-          delete roomNames[roomId];
-          delete roomSandboxMode[roomId];
+        // Mark this player as disconnected with timestamp instead of immediately removing
+        if (roomPlayers[roomId][0] === socket.id || roomPlayers[roomId][1] === socket.id) {
+          if (!disconnectedPlayers[roomId]) {
+            disconnectedPlayers[roomId] = {};
+          }
+          disconnectedPlayers[roomId][socket.id] = Date.now();
+          console.log(`Marked socket ${socket.id} as disconnected in room ${roomId} with grace period`);
+          
+          // Schedule removal after grace period
+          setTimeout(() => {
+            if (disconnectedPlayers[roomId] && disconnectedPlayers[roomId][socket.id]) {
+              console.log(`Grace period expired for socket ${socket.id} in room ${roomId}, removing from room`);
+              delete disconnectedPlayers[roomId][socket.id];
+              
+              // Now actually remove the player from the room
+              if (roomPlayers[roomId][0] === socket.id) roomPlayers[roomId][0] = null;
+              if (roomPlayers[roomId][1] === socket.id) roomPlayers[roomId][1] = null;
+              roomPlayers[roomId] = [roomPlayers[roomId][0] || null, roomPlayers[roomId][1] || null];
+              roomPlayers[roomId].length = 2;
+              
+              // Check if we're back to one player (re-enter sandbox mode)
+              if ((roomPlayers[roomId][0] && !roomPlayers[roomId][1]) || (!roomPlayers[roomId][0] && roomPlayers[roomId][1])) {
+                roomSandboxMode[roomId] = true;
+                console.log(`Re-entering sandbox mode for room ${roomId} after grace period`);
+              }
+              
+              if (!roomPlayers[roomId][0] && !roomPlayers[roomId][1]) {
+                delete roomPlayers[roomId];
+                delete roomTurns[roomId];
+                delete roomNames[roomId];
+                delete roomSandboxMode[roomId];
+                delete disconnectedPlayers[roomId];
+              }
+            }
+          }, DISCONNECT_GRACE_PERIOD);
         }
       }
       console.log('user disconnected:', socket.id);
@@ -482,8 +549,62 @@ function generateRoomCode(existingRooms) {
 // Track active room codes
 const activeRooms = new Set();
 
+// Cleanup function for expired disconnected players
+function cleanupDisconnectedPlayers() {
+  const now = Date.now();
+  for (const roomId in disconnectedPlayers) {
+    for (const socketId in disconnectedPlayers[roomId]) {
+      if (now - disconnectedPlayers[roomId][socketId] > DISCONNECT_GRACE_PERIOD) {
+        console.log(`Cleaning up expired disconnected player ${socketId} from room ${roomId}`);
+        delete disconnectedPlayers[roomId][socketId];
+        
+        // Remove from room if still present
+        if (roomPlayers[roomId]) {
+          if (roomPlayers[roomId][0] === socketId) roomPlayers[roomId][0] = null;
+          if (roomPlayers[roomId][1] === socketId) roomPlayers[roomId][1] = null;
+          roomPlayers[roomId] = [roomPlayers[roomId][0] || null, roomPlayers[roomId][1] || null];
+          roomPlayers[roomId].length = 2;
+        }
+      }
+    }
+    
+    // Clean up empty disconnected players object
+    if (Object.keys(disconnectedPlayers[roomId]).length === 0) {
+      delete disconnectedPlayers[roomId];
+    }
+  }
+}
+
+// Run cleanup every 10 seconds
+setInterval(cleanupDisconnectedPlayers, 10000);
+
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    activeRooms: activeRooms.size,
+    roomPlayers: Object.keys(roomPlayers).length,
+    disconnectedPlayers: Object.keys(disconnectedPlayers).length
+  });
+});
+
 app.get('/api/create-room', (req, res) => {
   const roomId = generateRoomCode(activeRooms);
   activeRooms.add(roomId);
   res.json({ roomId });
+});
+
+app.get('/api/room-status/:roomId', (req, res) => {
+  const { roomId } = req.params;
+  const roomData = {
+    roomId,
+    players: roomPlayers[roomId] || null,
+    names: roomNames[roomId] || null,
+    turns: roomTurns[roomId] || null,
+    sandboxMode: roomSandboxMode[roomId] || null,
+    disconnectedPlayers: disconnectedPlayers[roomId] || null,
+    ball: roomBall[roomId] || null,
+    scores: roomScores[roomId] || null
+  };
+  res.json(roomData);
 });
