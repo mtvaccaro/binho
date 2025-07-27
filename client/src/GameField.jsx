@@ -256,10 +256,13 @@ function GameField({
           onTouchMove={handleTouchMove}
           xmlns="http://www.w3.org/2000/svg"
         >
-          {/* Arrowhead marker for drag line */}
+          {/* Arrowhead markers for drag line */}
           <defs>
-            <marker id="arrowhead" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto" markerUnits="strokeWidth">
+            <marker id="arrowhead-green" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto" markerUnits="strokeWidth">
               <polygon points="0,0 8,4 0,8" fill="#b5f200" />
+            </marker>
+            <marker id="arrowhead-orange" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto" markerUnits="strokeWidth">
+              <polygon points="0,0 8,4 0,8" fill="orange" />
             </marker>
           </defs>
           {/* Field outline */}
@@ -311,7 +314,7 @@ function GameField({
                 y2={ballPos.y + dy + wiggleY}
                 stroke={clutchActive ? 'orange' : '#b5f200'}
                 strokeWidth="4"
-                markerEnd="url(#arrowhead)"
+                markerEnd={clutchActive ? "url(#arrowhead-orange)" : "url(#arrowhead-green)"}
               />
             );
           })()}
