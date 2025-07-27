@@ -332,7 +332,11 @@ function Game() {
     });
     if (roomId && nameSubmitted) {
       console.log('Emitting join-room:', roomId, playerName); // Debug log
-      socket.emit('join-room', { roomId, name: playerName });
+      socket.emit('join-room', { 
+        roomId, 
+        name: playerName, 
+        userAgent: navigator.userAgent 
+      });
       console.log('Joining room:', roomId, 'with name:', playerName);
     } else {
       console.log('NOT emitting join-room because:', { 

@@ -79,7 +79,7 @@ const roomSandboxMode = {}; // { roomId: boolean }
 
 // Add disconnect tracking with grace period
 const disconnectedPlayers = {}; // { roomId: { socketId: timestamp } }
-const DISCONNECT_GRACE_PERIOD = 30000; // 30 seconds grace period
+const DISCONNECT_GRACE_PERIOD = 5000; // 5 seconds grace period for mobile-friendly behavior
 const FRICTION = 0.96; // Increased friction for quicker ball slowdown
 const MIN_VELOCITY = 0.5;
 const PHYSICS_TICK = 1000 / 60; // 60Hz
@@ -119,8 +119,9 @@ function circlesCollide(a, rA, b, rB) {
 io.on('connection', (socket) => {
     console.log('a user connected:', socket.id);
   
-    socket.on('join-room', ({ roomId, name }) => {
-      console.log(`🎯 JOIN-ROOM: Socket ${socket.id} joining room ${roomId} with name: ${name}`);
+    socket.on('join-room', ({ roomId, name, userAgent }) => {
+      const isMobile = userAgent && (userAgent.includes('Mobile') || userAgent.includes('Android') || userAgent.includes('iPhone'));
+      console.log(`🎯 JOIN-ROOM: Socket ${socket.id} joining room ${roomId} with name: ${name} (Mobile: ${isMobile})`);
       console.log(`🎯 Room state before join:`, {
         roomId,
         roomPlayers: roomPlayers[roomId],
@@ -157,6 +158,24 @@ io.on('connection', (socket) => {
         });
         io.to(roomId).emit('turn-update', { currentTurn: roomTurns[roomId], playerNames: roomNames[roomId] });
         return;
+      }
+      
+      // Clear any disconnected players from this room to make space for new joins
+      if (disconnectedPlayers[roomId]) {
+        console.log(`🎯 Clearing disconnected players for room ${roomId}:`, disconnectedPlayers[roomId]);
+        for (const disconnectedSocketId in disconnectedPlayers[roomId]) {
+          // Remove disconnected socket from room slots
+          if (roomPlayers[roomId][0] === disconnectedSocketId) {
+            console.log(`🎯 Removing disconnected socket ${disconnectedSocketId} from slot 1`);
+            roomPlayers[roomId][0] = null;
+          }
+          if (roomPlayers[roomId][1] === disconnectedSocketId) {
+            console.log(`🎯 Removing disconnected socket ${disconnectedSocketId} from slot 2`);
+            roomPlayers[roomId][1] = null;
+          }
+        }
+        // Clear the disconnected players tracking for this room
+        delete disconnectedPlayers[roomId];
       }
       
       // Remove socket ID from both slots if present (for reconnection scenarios)
@@ -499,6 +518,9 @@ io.on('connection', (socket) => {
           disconnectedPlayers[roomId][socket.id] = Date.now();
           console.log(`Marked socket ${socket.id} as disconnected in room ${roomId} with grace period`);
           
+          // For mobile scenarios, use a shorter grace period
+          const gracePeriod = 3000; // 3 seconds for mobile-friendly behavior
+          
           // Schedule removal after grace period
           setTimeout(() => {
             if (disconnectedPlayers[roomId] && disconnectedPlayers[roomId][socket.id]) {
@@ -525,7 +547,7 @@ io.on('connection', (socket) => {
                 delete disconnectedPlayers[roomId];
               }
             }
-          }, DISCONNECT_GRACE_PERIOD);
+          }, gracePeriod);
         }
       }
       console.log('user disconnected:', socket.id);
