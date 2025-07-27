@@ -78,9 +78,9 @@ function GameField({
     if (clutchActive && dragging) {
       const start = performance.now();
       const animate = (now) => {
-        // 10px amplitude, 2Hz frequency
+        // 5px amplitude, 4Hz frequency (faster speed, smaller range)
         const t = (now - start) / 1000;
-        setClutchWiggle(Math.sin(t * 2 * Math.PI * 2) * 10);
+        setClutchWiggle(Math.sin(t * 2 * Math.PI * 4) * 5);
         animId = requestAnimationFrame(animate);
       };
       animId = requestAnimationFrame(animate);
