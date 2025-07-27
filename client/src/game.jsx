@@ -331,13 +331,13 @@ function Game() {
       backendUrl: socket.io.uri 
     });
     if (roomId && nameSubmitted) {
-      console.log('Emitting join-room:', roomId, playerName); // Debug log
+      console.log('🎯 Emitting join-room:', { roomId, playerName, userAgent: navigator.userAgent }); // Debug log
       socket.emit('join-room', { 
         roomId, 
         name: playerName, 
         userAgent: navigator.userAgent 
       });
-      console.log('Joining room:', roomId, 'with name:', playerName);
+      console.log('🎯 Joining room:', roomId, 'with name:', playerName);
     } else {
       console.log('NOT emitting join-room because:', { 
         roomId: roomId, 
@@ -363,9 +363,13 @@ function Game() {
 
     // Handle when another player joins (exiting sandbox mode)
     socket.on('player-joined', ({ playerNames: names, currentTurn, ballPos, score }) => {
-      console.log(`🎯 Another player joined, exiting sandbox mode`);
-      console.log(`🎯 Received score:`, score);
-      console.log(`🎯 Current score state:`, score);
+      console.log(`🎯 PLAYER-JOINED EVENT RECEIVED by Player ${playerNumberRef.current}:`, {
+        playerNames: names,
+        currentTurn,
+        ballPos,
+        score,
+        myPlayerNumber: playerNumberRef.current
+      });
       setPlayerNames(names);
       setCurrentTurn(currentTurn);
       setSandboxMode(false);

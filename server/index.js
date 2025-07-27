@@ -244,9 +244,13 @@ io.on('connection', (socket) => {
       
       console.log(`🎯 Room ${roomId} players after join:`, roomPlayers[roomId]);
       console.log(`🎯 Checking if both players are present:`, roomPlayers[roomId][0], '&&', roomPlayers[roomId][1]);
+      console.log(`🎯 Sandbox mode for room ${roomId}:`, roomSandboxMode[roomId]);
+      
       // Check if this is the second player joining (exiting sandbox mode)
       if (roomPlayers[roomId][0] && roomPlayers[roomId][1]) {
         console.log(`🎯 Both players detected! Exiting sandbox mode for room ${roomId}`);
+        console.log(`🎯 Player 1: ${roomNames[roomId][1]} (socket: ${roomPlayers[roomId][0]})`);
+        console.log(`🎯 Player 2: ${roomNames[roomId][2]} (socket: ${roomPlayers[roomId][1]})`);
         // Both players are now in the room, exit sandbox mode
         roomSandboxMode[roomId] = false;
         // Reset ball to starting position for real game
@@ -644,4 +648,20 @@ app.get('/api/room-status/:roomId', (req, res) => {
     scores: roomScores[roomId] || null
   };
   res.json(roomData);
+});
+
+app.get('/api/all-rooms', (req, res) => {
+  const allRooms = {};
+  for (const roomId in roomPlayers) {
+    allRooms[roomId] = {
+      players: roomPlayers[roomId],
+      names: roomNames[roomId],
+      turns: roomTurns[roomId],
+      sandboxMode: roomSandboxMode[roomId],
+      disconnectedPlayers: disconnectedPlayers[roomId],
+      ball: roomBall[roomId],
+      scores: roomScores[roomId]
+    };
+  }
+  res.json(allRooms);
 });
