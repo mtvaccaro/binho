@@ -2,6 +2,18 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
+
+// Add better error handling and logging
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  process.exit(1);
+});
+
 const app = express();
 
 // Health check route for Railway and browsers
@@ -9,6 +21,16 @@ app.get('/', (req, res) => {
   res.status(200).json({ 
     status: 'ok', 
     message: 'Binho backend is running!',
+    timestamp: new Date().toISOString(),
+    port: process.env.PORT || 3000,
+    nodeEnv: process.env.NODE_ENV || 'development'
+  });
+});
+
+// Simple test endpoint
+app.get('/test', (req, res) => {
+  res.status(200).json({ 
+    message: 'Test endpoint working!',
     timestamp: new Date().toISOString()
   });
 });
@@ -569,9 +591,10 @@ server.on('error', (error) => {
   }
 });
 
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`Server listening on port ${PORT}`);
   console.log(`Health check available at: http://localhost:${PORT}/health`);
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });
 
 // Utility to generate a 4-character alphanumeric code

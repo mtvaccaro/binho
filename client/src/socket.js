@@ -7,9 +7,18 @@ const isLocal = window.location.hostname === "localhost" || window.location.host
 const backendUrl = envBackendUrl
   ? envBackendUrl
   : isLocal
-  ? "http://localhost:3001"
+  ? "http://localhost:3000"
   : "https://binho-production.up.railway.app";
-const socket = io(backendUrl);
+
+console.log('Attempting to connect to backend at:', backendUrl);
+console.log('Current hostname:', window.location.hostname);
+console.log('Is local:', isLocal);
+
+const socket = io(backendUrl, {
+  transports: ['websocket', 'polling'],
+  timeout: 10000,
+  forceNew: true
+});
 
 console.log('Socket connecting to:', backendUrl);
 
